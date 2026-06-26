@@ -1,1 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>App Carne Puerco 🐷</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f4f6f8;color:#1F3864;padding-bottom:80px}
+.topbar{background:#1F3864;color:#fff;padding:14px 16px;font-size:17px;font-weight:700;text-align:center;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:center;gap:8px}
+.container{padding:14px;max-width:600px;margin:0 auto}
+h2{font-size:16px;margin-bottom:4px}
+.sub{font-size:12px;color:#888;margin-bottom:14px}
+.label{font-size:11px;color:#666;font-weight:700;text-transform:uppercase;margin-bottom:6px;margin-top:14px;letter-spacing:.03em}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.btn-sel{background:#fff;border:1.5px solid #ddd;border-radius:10px;padding:13px 8px;font-size:13px;font-weight:600;color:#1F3864;cursor:pointer;text-align:center;transition:all .12s}
+.btn-sel:active{transform:scale(.97)}
+.btn-sel.sel{border:2px solid #2E75B6;background:#EBF3FB;color:#2E75B6}
+.btn-sel.hecho{opacity:.5}
+.btn-corte.sel{border:2px solid #70AD47;background:#EAF3DE;color:#375623}
+.btn-tipo.sel{border:2px solid #ED7D31;background:#FCE4D6;color:#833C00}
+input,select,textarea{width:100%;border:1.5px solid #ddd;border-radius:8px;padding:11px;font-size:16px;margin-bottom:8px;background:#fff;font-family:inherit}
+textarea{height:54px;resize:none}
+.linea-corte{background:#fff;border:1.5px solid #e0e0e0;border-radius:8px;padding:9px 11px;margin-bottom:6px;display:flex;align-items:center;gap:7px}
+.linea-corte input{margin:0;padding:7px;font-size:15px}
+.nombre-corte{flex:1;font-size:13px;font-weight:700}
+.btn-x{background:none;border:none;color:#c00;font-size:22px;cursor:pointer;padding:0 4px;line-height:1}
+.btn{width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:10px;cursor:pointer;border:none;margin-bottom:8px;transition:all .12s}
+.btn:active{transform:scale(.98)}
+.btn-verde{background:#70AD47;color:#fff}
+.btn-azul{background:#2E75B6;color:#fff}
+.btn-naranja{background:#ED7D31;color:#fff}
+.btn-gris{background:#e8e8e8;color:#444}
+.card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:12px;margin-bottom:8px}
+.card-title{font-size:15px;font-weight:700;margin-bottom:7px}
+.linea-res{display:flex;justify-content:space-between;font-size:13px;color:#555;padding:2px 0}
+.total-res{display:flex;justify-content:space-between;font-size:14px;font-weight:700;border-top:1px solid #eee;margin-top:6px;padding-top:6px}
+.empty{text-align:center;color:#aaa;font-size:13px;padding:24px}
+.cargando{text-align:center;color:#2E75B6;font-size:13px;padding:16px}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#375623;color:#fff;padding:12px 22px;border-radius:10px;font-size:14px;font-weight:600;z-index:200;display:none;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.toast.error{background:#c0392b}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #ddd;display:flex;z-index:100}
+.nav button{flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:#999;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+.nav button.active{color:#2E75B6}
+.nav .ico{font-size:20px}
+.screen{display:none}
+.screen.active{display:block}
+.pasos-bar{display:flex;gap:4px;margin-bottom:14px}
+.p{flex:1;height:4px;border-radius:2px;background:#e0e0e0}
+.p.done{background:#2E75B6}.p.active{background:#70AD47}
+.semana-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.semana-row label{font-size:13px;white-space:nowrap;font-weight:600}
+.semana-row input{margin:0}
+.saldo.rojo{color:#c00}
+.resumen-box{background:#EAF3DE;border:1.5px solid #70AD47;border-radius:10px;padding:11px;margin-bottom:10px}
+.resumen-box .linea-res{color:#375623}
+</style>
+</head>
+<body>
+
+<div class="topbar">🐷 <span id="topbar-title">Levantar Pedidos</span></div>
+<div id="toast" class="toast"></div>
+
+<div class="container">
+
+<!-- ===== PEDIDOS ===== -->
+<div id="vista-pedidos" class="screen active">
+  <div class="pasos-bar"><div class="p active" id="pb1"></div><div class="p" id="pb2"></div><div class="p" id="pb3"></div></div>
+
+  <div id="paso1" class="screen active">
+    <h2>Nuevo pedido</h2>
+    <div class="sub">Elige la semana y el cliente</div>
+    <div class="semana-row"><label>Semana:</label><input type="text" id="semana" placeholder="ej: 30/05/2026"></div>
+    <div class="label">Cliente</div>
+    <div class="grid2" id="grid-clientes"><div class="cargando">Cargando clientes...</div></div>
+    <br><button class="btn btn-azul" onclick="irPaso2()">Seleccionar piezas →</button>
+  </div>
+
+  <div id="paso2" class="screen">
+    <h2 id="titulo-p2">Pedido de —</h2>
+    <div class="sub">Toca los cortes y anota los kilos</div>
+    <div class="label">Cortes</div>
+    <div class="grid2" id="grid-cortes"></div>
+    <div id="lineas-wrap" style="display:none">
+      <div class="label">Kilos y precio por corte</div>
+      <div id="lineas-cortes"></div>
+      <div class="label">Nota (opcional)</div>
+      <textarea id="nota-pedido" placeholder="Ej: entregar antes del mediodía"></textarea>
+    </div>
+    <div id="empty-cortes" class="empty">Toca los cortes de arriba para agregarlos</div>
+    <button class="btn btn-verde" onclick="guardarPedido()">Guardar pedido ✓</button>
+    <button class="btn btn-gris" onclick="setPaso(1)">← Cambiar cliente</button>
+  </div>
+
+  <div id="paso3" class="screen">
+    <h2>Pedidos — <span id="semana-tit"></span></h2>
+    <div class="sub">Resumen de la semana</div>
+    <div id="resumen-pedidos"></div>
+    <button class="btn btn-azul" onclick="nuevoPedido()">+ Agregar otro pedido</button>
+  </div>
+</div>
+
+<!-- ===== COBRANZA ===== -->
+<div id="vista-cobranza" class="screen">
+  <h2>Registrar cobranza</h2>
+  <div class="sub">Anota lo que pagó cada cliente</div>
+  <div class="semana-row"><label>Semana:</label><input type="text" id="c-semana" placeholder="ej: 30/05/2026"></div>
+  <div class="label">Cliente</div>
+  <div class="grid2" id="c-grid-clientes"><div class="cargando">Cargando...</div></div>
+  <div class="label">Total facturado ($)</div>
+  <input type="number" id="c-total" placeholder="Monto total de su pedido" inputmode="decimal">
+  <div class="label">Abono recibido ($) — escribe 0 si no pagó</div>
+  <input type="number" id="c-abono" placeholder="0" inputmode="decimal">
+  <div class="label">Forma de pago</div>
+  <select id="c-pago"><option value="">-- Selecciona --</option><option>Efectivo</option><option>Transferencia</option></select>
+  <div id="c-resumen" class="resumen-box" style="display:none">
+    <div class="linea-res"><span>Total facturado</span><span id="cr-total">$0</span></div>
+    <div class="linea-res"><span>Abono</span><span id="cr-abono">$0</span></div>
+    <div class="linea-res total-res saldo" id="cr-saldo-row"><span>Saldo pendiente</span><span id="cr-saldo">$0</span></div>
+  </div>
+  <div class="label">Nota (opcional)</div>
+  <textarea id="c-nota" placeholder="Ej: pagó con billete de 500"></textarea>
+  <button class="btn btn-verde" onclick="guardarCobranza()">Guardar cobranza ✓</button>
+</div>
+
+<!-- ===== GASTOS ===== -->
+<div id="vista-gastos" class="screen">
+  <h2>Registrar gasto / compra</h2>
+  <div class="sub">Egresos del negocio</div>
+  <div class="semana-row"><label>Semana:</label><input type="text" id="g-semana" placeholder="ej: 30/05/2026"></div>
+  <div class="label">Tipo</div>
+  <div class="grid2">
+    <button class="btn-sel btn-tipo" id="g-btn-gasto" onclick="selTipo('Gasto')">💸 Gasto operativo</button>
+    <button class="btn-sel btn-tipo" id="g-btn-canal" onclick="selTipo('Compra Canal')">🐷 Compra de canal</button>
+  </div>
+  <div class="label">Concepto</div>
+  <select id="g-concepto"><option value="">-- Selecciona --</option><option>Renta</option><option>Empleados</option><option>Gasolina / Gas</option><option>Maquila Rastro</option><option>Otro</option></select>
+  <div class="label">Proveedor (opcional)</div>
+  <input type="text" id="g-proveedor" placeholder="Nombre del proveedor">
+  <div id="g-campo-kg" style="display:none">
+    <div class="label">Kilos comprados</div>
+    <input type="number" id="g-kg" placeholder="kg de canal" inputmode="decimal">
+  </div>
+  <div class="label">Monto ($)</div>
+  <input type="number" id="g-monto" placeholder="0.00" inputmode="decimal">
+  <div class="label">Nota (opcional)</div>
+  <textarea id="g-nota" placeholder="Ej: 2 canales de proveedor Pérez"></textarea>
+  <button class="btn btn-naranja" onclick="guardarGasto()">Guardar gasto ✓</button>
+</div>
+
+</div>
+
+<div class="nav">
+  <button id="nav-pedidos" class="active" onclick="cambiarVista('pedidos')"><span class="ico">🛒</span>Pedidos</button>
+  <button id="nav-cobranza" onclick="cambiarVista('cobranza')"><span class="ico">💰</span>Cobranza</button>
+  <button id="nav-gastos" onclick="cambiarVista('gastos')"><span class="ico">📦</span>Gastos</button>
+</div>
+
+<script>
+// ====== CONFIGURACIÓN ======
+var API_KEY = 'AIzaSyAkXYXBApwfaS_Ds_Ov8KGZEGWGqSidRt4';
+var SHEET_ID = '1k-i4h4wwIi9C8uCaZo7tGzbe_MTsk8s4h67ru5wqNjk';
+var BACKEND = 'https://script.google.com/macros/s/AKfycbz7-FCCqh1PmKuovw9fTqO1c8bo6D4x2fRB9C7WB5_f6i9P_gn3kwRTo8nCY4prvOE_-Q/exec';
+
+// ====== ESTADO ======
+var clientes = [], cortes = [], preciosMatriz = {};
+var cortesActivos = {}, pedidos = [], clienteActual = '', preciosCliente = {};
+var tipoActual = '';
+
+// ====== UTILIDADES ======
+function toast(msg, esError){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (esError ? ' error' : '');
+  t.style.display = 'block';
+  setTimeout(function(){ t.style.display = 'none'; }, 2600);
+}
+
+function sheetURL(rango){
+  return 'https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID +
+    '/values/' + encodeURIComponent(rango) + '?key=' + API_KEY;
+}
+
+function guardarEnSheet(action, datos, onOk){
+  var url = BACKEND + '?action=' + action + '&datos=' + encodeURIComponent(JSON.stringify(datos));
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(resp){
+      if(resp.status === 'ok'){ onOk(); }
+      else { toast('Error: ' + (resp.mensaje||'no se pudo guardar'), true); }
+    })
+    .catch(function(err){ toast('Error de conexión: ' + err.message, true); });
+}
+
+// ====== CARGA INICIAL ======
+function cargarDatos(){
+  // Clientes
+  fetch(sheetURL('Catálogos!A3:A17'))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      clientes = (d.values||[]).map(function(r){ return r[0]; }).filter(Boolean);
+      renderClientes(); renderClientesCobranza();
+    })
+    .catch(function(){ toast('No se pudieron cargar clientes', true); });
+  // Cortes
+  fetch(sheetURL('Catálogos!B3:B20'))
+    .then(function(r){ return r.json(); })
+    .then(function(d){ cortes = (d.values||[]).map(function(r){ return r[0]; }).filter(Boolean); });
+  // Precios (matriz completa)
+  fetch(sheetURL('Precios!A3:P21'))
+    .then(function(r){ return r.json(); })
+    .then(function(d){ parsePrecios(d.values||[]); });
+}
+
+function parsePrecios(filas){
+  preciosMatriz = {};
+  if(!filas.length) return;
+  var encabezado = filas[0]; // fila 3: A3 vacío, B3..P3 nombres clientes
+  for(var f=1; f<filas.length; f++){
+    var corte = filas[f][0];
+    if(!corte) continue;
+    for(var c=1; c<encabezado.length; c++){
+      var cli = encabezado[c];
+      if(!cli) continue;
+      var precio = filas[f][c];
+      if(precio !== undefined && precio !== ''){
+        preciosMatriz[cli + '||' + corte] = parseFloat(precio) || '';
+      }
+    }
+  }
+}
+
+function getPreciosCliente(cli){
+  var r = {};
+  cortes.forEach(function(corte){
+    var k = cli + '||' + corte;
+    if(preciosMatriz[k] !== undefined) r[corte] = preciosMatriz[k];
+  });
+  return r;
+}
+
+// ====== NAVEGACIÓN ======
+function cambiarVista(v){
+  ['pedidos','cobranza','gastos'].forEach(function(x){
+    document.getElementById('vista-'+x).className = 'screen' + (x===v?' active':'');
+    document.getElementById('nav-'+x).className = (x===v?'active':'');
+  });
+  var titulos = {pedidos:'Levantar Pedidos', cobranza:'Registrar Cobranza', gastos:'Registrar Gastos'};
+  document.getElementById('topbar-title').textContent = titulos[v];
+}
+
+// ====== PEDIDOS ======
+function renderClientes(){
+  var g = document.getElementById('grid-clientes'); g.innerHTML='';
+  clientes.forEach(function(c){
+    var usados = pedidos.map(function(p){ return p.cliente; });
+    var b = document.createElement('button');
+    b.className = 'btn-sel' + (clienteActual===c?' sel':'') + (usados.indexOf(c)>=0?' hecho':'');
+    b.textContent = (usados.indexOf(c)>=0?'✓ ':'') + c;
+    b.onclick = function(){ clienteActual=c; renderClientes(); };
+    g.appendChild(b);
+  });
+}
+
+function setPaso(n){
+  [1,2,3].forEach(function(i){
+    document.getElementById('paso'+i).className = 'screen' + (i===n?' active':'');
+    var pb = document.getElementById('pb'+i);
+    pb.className = 'p' + (i<n?' done':(i===n?' active':''));
+  });
+}
+
+function irPaso2(){
+  var sem = document.getElementById('semana').value.trim();
+  if(!sem){ toast('Escribe la semana primero', true); return; }
+  if(!clienteActual){ toast('Selecciona un cliente', true); return; }
+  cortesActivos = {};
+  preciosCliente = getPreciosCliente(clienteActual);
+  document.getElementById('titulo-p2').textContent = 'Pedido de ' + clienteActual;
+  renderCortes();
+  setPaso(2);
+}
+
+function renderCortes(){
+  var g = document.getElementById('grid-cortes'); g.innerHTML='';
+  cortes.forEach(function(c){
+    var b = document.createElement('button');
+    b.className = 'btn-sel btn-corte' + (cortesActivos[c]?' sel':'');
+    b.textContent = c;
+    b.onclick = function(){ toggleCorte(c); };
+    g.appendChild(b);
+  });
+  renderLineas();
+}
+
+function toggleCorte(c){
+  if(cortesActivos[c]) delete cortesActivos[c];
+  else cortesActivos[c] = {kg:'', precio: preciosCliente[c]||''};
+  renderCortes();
+}
+
+function renderLineas(){
+  var keys = Object.keys(cortesActivos);
+  document.getElementById('lineas-wrap').style.display = keys.length?'block':'none';
+  document.getElementById('empty-cortes').style.display = keys.length?'none':'block';
+  var cont = document.getElementById('lineas-cortes'); cont.innerHTML='';
+  keys.forEach(function(c){
+    var d = document.createElement('div'); d.className='linea-corte';
+    var safe = c.replace(/'/g, "\\'");
+    d.innerHTML = '<span class="nombre-corte">'+c+'</span>'+
+      '<input type="number" inputmode="decimal" placeholder="kg" value="'+cortesActivos[c].kg+'" oninput="cortesActivos[\''+safe+'\'].kg=this.value" style="width:62px">'+
+      '<input type="number" inputmode="decimal" placeholder="$/kg" value="'+cortesActivos[c].precio+'" oninput="cortesActivos[\''+safe+'\'].precio=this.value" style="width:70px">'+
+      '<button class="btn-x" onclick="toggleCorte(\''+safe+'\')">&times;</button>';
+    cont.appendChild(d);
+  });
+}
+
+function guardarPedido(){
+  var keys = Object.keys(cortesActivos);
+  if(!keys.length){ toast('Agrega al menos un corte', true); return; }
+  var tieneKg = keys.some(function(c){ return parseFloat(cortesActivos[c].kg)>0; });
+  if(!tieneKg){ toast('Anota los kilos de al menos un corte', true); return; }
+  var lineas = keys.map(function(c){
+    return {corte:c, kg:parseFloat(cortesActivos[c].kg)||0, precio:parseFloat(cortesActivos[c].precio)||0};
+  }).filter(function(l){ return l.kg>0; });
+  var sem = document.getElementById('semana').value.trim();
+  var datos = {
+    fecha: new Date().toISOString(),
+    semana: sem,
+    cliente: clienteActual,
+    lineas: lineas,
+    nota: document.getElementById('nota-pedido').value.trim()
+  };
+  guardarEnSheet('guardarPedido', datos, function(){
+    pedidos.push(datos);
+    // Actualizar matriz local de precios
+    lineas.forEach(function(l){ if(l.precio) preciosMatriz[clienteActual+'||'+l.corte]=l.precio; });
+    clienteActual=''; cortesActivos={};
+    document.getElementById('semana-tit').textContent = sem;
+    renderResumen();
+    toast('✓ Pedido guardado');
+    setPaso(3);
+  });
+}
+
+function renderResumen(){
+  var cont = document.getElementById('resumen-pedidos');
+  if(!pedidos.length){ cont.innerHTML='<div class="empty">Sin pedidos aún</div>'; return; }
+  cont.innerHTML='';
+  pedidos.forEach(function(p){
+    var total = p.lineas.reduce(function(s,l){ return s + l.kg*l.precio; }, 0);
+    var lh = p.lineas.map(function(l){
+      return '<div class="linea-res"><span>'+l.corte+'</span><span>'+(l.kg||'—')+' kg'+(l.precio&&l.kg?' · $'+(l.kg*l.precio).toFixed(2):'')+'</span></div>';
+    }).join('');
+    var card = document.createElement('div'); card.className='card';
+    card.innerHTML = '<div class="card-title">'+p.cliente+'</div>'+lh+
+      (p.nota?'<div style="font-size:11px;color:#888;margin-top:4px">📝 '+p.nota+'</div>':'')+
+      (total?'<div class="total-res"><span>Total estimado</span><span>$'+total.toFixed(2)+'</span></div>':'');
+    cont.appendChild(card);
+  });
+}
+
+function nuevoPedido(){
+  clienteActual=''; cortesActivos={};
+  renderClientes();
+  setPaso(1);
+}
+
+// ====== COBRANZA ======
+var cClienteActual = '';
+function renderClientesCobranza(){
+  var g = document.getElementById('c-grid-clientes'); g.innerHTML='';
+  clientes.forEach(function(c){
+    var b = document.createElement('button');
+    b.className = 'btn-sel' + (cClienteActual===c?' sel':'');
+    b.textContent = c;
+    b.onclick = function(){ cClienteActual=c; renderClientesCobranza(); };
+    g.appendChild(b);
+  });
+}
+
+function actualizarResumenCobranza(){
+  var total = parseFloat(document.getElementById('c-total').value)||0;
+  var abono = parseFloat(document.getElementById('c-abono').value)||0;
+  if(total>0){
+    document.getElementById('c-resumen').style.display='block';
+    document.getElementById('cr-total').textContent='$'+total.toFixed(2);
+    document.getElementById('cr-abono').textContent='$'+abono.toFixed(2);
+    var saldo = total-abono;
+    document.getElementById('cr-saldo').textContent='$'+saldo.toFixed(2);
+    document.getElementById('cr-saldo-row').className='linea-res total-res saldo'+(saldo>0?' rojo':'');
+  } else {
+    document.getElementById('c-resumen').style.display='none';
+  }
+}
+
+function guardarCobranza(){
+  var sem = document.getElementById('c-semana').value.trim();
+  if(!sem){ toast('Escribe la semana', true); return; }
+  if(!cClienteActual){ toast('Selecciona un cliente', true); return; }
+  var total = parseFloat(document.getElementById('c-total').value)||0;
+  var abono = parseFloat(document.getElementById('c-abono').value)||0;
+  var pago = document.getElementById('c-pago').value;
+  if(total<=0){ toast('El total facturado debe ser mayor a 0', true); return; }
+  if(abono<0){ toast('El abono no puede ser negativo', true); return; }
+  if(abono>total){ toast('El abono no puede ser mayor al total', true); return; }
+  if(abono>0 && !pago){ toast('Selecciona la forma de pago', true); return; }
+  var datos = {
+    fecha: new Date().toISOString(), semana: sem, cliente: cClienteActual,
+    totalFacturado: total, abono: abono,
+    formaPago: abono>0?pago:'Sin pago',
+    nota: document.getElementById('c-nota').value.trim()
+  };
+  guardarEnSheet('guardarCobranza', datos, function(){
+    cClienteActual='';
+    document.getElementById('c-total').value='';
+    document.getElementById('c-abono').value='';
+    document.getElementById('c-pago').value='';
+    document.getElementById('c-nota').value='';
+    document.getElementById('c-resumen').style.display='none';
+    renderClientesCobranza();
+    toast('✓ Cobranza guardada');
+  });
+}
+
+// ====== GASTOS ======
+function selTipo(tipo){
+  tipoActual = tipo;
+  document.getElementById('g-btn-gasto').className='btn-sel btn-tipo'+(tipo==='Gasto'?' sel':'');
+  document.getElementById('g-btn-canal').className='btn-sel btn-tipo'+(tipo==='Compra Canal'?' sel':'');
+  document.getElementById('g-campo-kg').style.display = tipo==='Compra Canal'?'block':'none';
+  var sel = document.getElementById('g-concepto');
+  if(tipo==='Compra Canal'){
+    sel.innerHTML='<option value="Compra Canal">Compra Canal</option>';
+    sel.value='Compra Canal';
+  } else {
+    sel.innerHTML='<option value="">-- Selecciona --</option><option>Renta</option><option>Empleados</option><option>Gasolina / Gas</option><option>Maquila Rastro</option><option>Otro</option>';
+  }
+}
+
+function guardarGasto(){
+  var sem = document.getElementById('g-semana').value.trim();
+  if(!sem){ toast('Escribe la semana', true); return; }
+  if(!tipoActual){ toast('Selecciona el tipo', true); return; }
+  var concepto = document.getElementById('g-concepto').value;
+  if(!concepto){ toast('Selecciona el concepto', true); return; }
+  var monto = parseFloat(document.getElementById('g-monto').value)||0;
+  if(monto<=0){ toast('El monto debe ser mayor a 0', true); return; }
+  var kg = parseFloat(document.getElementById('g-kg').value)||0;
+  if(tipoActual==='Compra Canal' && kg<=0){ toast('Escribe los kilos comprados', true); return; }
+  var prov = document.getElementById('g-proveedor').value.trim();
+  var conceptoFinal = prov ? concepto+' — '+prov : concepto;
+  var datos = {
+    fecha: new Date().toISOString(), semana: sem, tipo: tipoActual,
+    concepto: conceptoFinal, kg: tipoActual==='Compra Canal'?kg:'',
+    monto: monto, nota: document.getElementById('g-nota').value.trim()
+  };
+  guardarEnSheet('guardarGasto', datos, function(){
+    tipoActual='';
+    document.getElementById('g-btn-gasto').className='btn-sel btn-tipo';
+    document.getElementById('g-btn-canal').className='btn-sel btn-tipo';
+    document.getElementById('g-campo-kg').style.display='none';
+    document.getElementById('g-proveedor').value='';
+    document.getElementById('g-kg').value='';
+    document.getElementById('g-monto').value='';
+    document.getElementById('g-nota').value='';
+    selTipo('');
+    document.getElementById('g-concepto').value='';
+    toast('✓ Gasto guardado');
+  });
+}
+
+// ====== INIT ======
+document.getElementById('c-total').addEventListener('input', actualizarResumenCobranza);
+document.getElementById('c-abono').addEventListener('input', actualizarResumenCobranza);
+cargarDatos();
+</script>
+</body>
+</html>
 
