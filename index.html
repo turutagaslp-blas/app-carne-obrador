@@ -57,6 +57,24 @@ textarea{height:54px;resize:none}
 .saldo.rojo{color:#c00}
 .resumen-box{background:#EAF3DE;border:1.5px solid #70AD47;border-radius:10px;padding:11px;margin-bottom:10px}
 .resumen-box .linea-res{color:#375623}
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.kpi{background:#fff;border:1px solid #ddd;border-radius:10px;padding:12px;text-align:center}
+.kpi .valor{font-size:19px;font-weight:800;margin-top:3px}
+.kpi .et{font-size:10px;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.kpi.verde .valor{color:#375623}
+.kpi.naranja .valor{color:#833C00}
+.kpi.azul .valor{color:#1F3864}
+.kpi.rojo .valor{color:#c0392b}
+.kpi.utilidad{grid-column:1/3;background:#1F3864;color:#fff;border:none}
+.kpi.utilidad .valor{color:#fff;font-size:24px}
+.kpi.utilidad .et{color:#bcd}
+.sec-titulo{font-size:13px;font-weight:800;color:#1F3864;margin:16px 0 8px;display:flex;align-items:center;gap:6px}
+.deuda-card{background:#fff;border:1px solid #ddd;border-left:4px solid #c0392b;border-radius:8px;padding:10px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.deuda-card.pagado{border-left-color:#70AD47}
+.deuda-nombre{font-size:14px;font-weight:700}
+.deuda-monto{font-size:15px;font-weight:800;color:#c0392b}
+.deuda-monto.cero{color:#70AD47}
+.btn-refresh{background:#fff;border:1.5px solid #2E75B6;color:#2E75B6;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;width:auto;display:inline-flex;align-items:center;gap:5px;margin:0}
 </style>
 </head>
 <body>
@@ -151,12 +169,27 @@ textarea{height:54px;resize:none}
   <button class="btn btn-naranja" onclick="guardarGasto()">Guardar gasto ✓</button>
 </div>
 
+<!-- ===== RESUMEN ===== -->
+<div id="vista-resumen" class="screen">
+  <h2>Resumen de la semana</h2>
+  <div class="sub">Pedidos, cobranza y balance</div>
+  <div class="semana-row">
+    <label>Semana:</label>
+    <input type="text" id="r-semana" placeholder="ej: 30/05/2026">
+    <button class="btn-refresh" onclick="cargarResumen()">Ver</button>
+  </div>
+  <div id="r-contenido">
+    <div class="empty">Escribe la semana y toca "Ver"</div>
+  </div>
+</div>
+
 </div>
 
 <div class="nav">
   <button id="nav-pedidos" class="active" onclick="cambiarVista('pedidos')"><span class="ico">🛒</span>Pedidos</button>
   <button id="nav-cobranza" onclick="cambiarVista('cobranza')"><span class="ico">💰</span>Cobranza</button>
   <button id="nav-gastos" onclick="cambiarVista('gastos')"><span class="ico">📦</span>Gastos</button>
+  <button id="nav-resumen" onclick="cambiarVista('resumen')"><span class="ico">📊</span>Resumen</button>
 </div>
 
 <script>
@@ -244,11 +277,11 @@ function getPreciosCliente(cli){
 
 // ====== NAVEGACIÓN ======
 function cambiarVista(v){
-  ['pedidos','cobranza','gastos'].forEach(function(x){
+  ['pedidos','cobranza','gastos','resumen'].forEach(function(x){
     document.getElementById('vista-'+x).className = 'screen' + (x===v?' active':'');
     document.getElementById('nav-'+x).className = (x===v?'active':'');
   });
-  var titulos = {pedidos:'Levantar Pedidos', cobranza:'Registrar Cobranza', gastos:'Registrar Gastos'};
+  var titulos = {pedidos:'Levantar Pedidos', cobranza:'Registrar Cobranza', gastos:'Registrar Gastos', resumen:'Resumen'};
   document.getElementById('topbar-title').textContent = titulos[v];
 }
 
@@ -473,6 +506,110 @@ function guardarGasto(){
   });
 }
 
+
+// ====== RESUMEN ======
+function cargarResumen(){
+  var sem = document.getElementById('r-semana').value.trim();
+  if(!sem){ toast('Escribe la semana a consultar', true); return; }
+  var cont = document.getElementById('r-contenido');
+  cont.innerHTML = '<div class="cargando">Cargando datos de la semana...</div>';
+
+  var urlPedidos = sheetURL('Pedidos!A3:H202');
+  var urlCobranza = sheetURL('Cobranza!A3:H202');
+  var urlGastos = sheetURL("'Gastos y Compras'!A3:G202");
+
+  Promise.all([
+    fetch(urlPedidos).then(function(r){return r.json();}),
+    fetch(urlCobranza).then(function(r){return r.json();}),
+    fetch(urlGastos).then(function(r){return r.json();})
+  ]).then(function(res){
+    var pedidos = (res[0].values||[]);
+    var cobranza = (res[1].values||[]);
+    var gastos = (res[2].values||[]);
+    renderResumenData(sem, pedidos, cobranza, gastos);
+  }).catch(function(err){
+    cont.innerHTML = '<div class="empty">Error al cargar: '+err.message+'</div>';
+  });
+}
+
+function renderResumenData(sem, pedidos, cobranza, gastos){
+  // PEDIDOS de la semana: agrupar por cliente
+  var ventasPorCliente = {};
+  var totalVendido = 0;
+  pedidos.forEach(function(row){
+    if(row[1] !== sem) return; // columna B = semana
+    var cliente = row[2];
+    var total = parseFloat(row[6]) || 0; // columna G = total
+    ventasPorCliente[cliente] = (ventasPorCliente[cliente]||0) + total;
+    totalVendido += total;
+  });
+
+  // COBRANZA de la semana: cobrado y deuda por cliente
+  var totalCobrado = 0;
+  var deudaPorCliente = {};
+  cobranza.forEach(function(row){
+    if(row[1] !== sem) return;
+    var cliente = row[2];
+    var abono = parseFloat(row[4]) || 0; // columna E = abono
+    var saldo = parseFloat(row[6]) || 0; // columna G = saldo pendiente
+    totalCobrado += abono;
+    if(saldo > 0) deudaPorCliente[cliente] = (deudaPorCliente[cliente]||0) + saldo;
+  });
+
+  // GASTOS de la semana
+  var totalGastos = 0;
+  gastos.forEach(function(row){
+    if(row[1] !== sem) return;
+    var monto = parseFloat(row[5]) || 0; // columna F = monto
+    totalGastos += monto;
+  });
+
+  var utilidad = totalCobrado - totalGastos;
+
+  // Construir HTML
+  var html = '';
+
+  // Balance
+  html += '<div class="card">';
+  html += '<div class="card-title">📊 Balance de la semana</div>';
+  html += '<div class="linea-res"><span>Total vendido</span><span>$'+totalVendido.toFixed(2)+'</span></div>';
+  html += '<div class="linea-res"><span>Total cobrado</span><span style="color:#375623;font-weight:700">$'+totalCobrado.toFixed(2)+'</span></div>';
+  html += '<div class="linea-res"><span>Total gastos</span><span style="color:#c0392b">-$'+totalGastos.toFixed(2)+'</span></div>';
+  html += '<div class="total-res"><span>Utilidad (cobrado - gastos)</span><span style="color:'+(utilidad>=0?'#375623':'#c0392b')+'">$'+utilidad.toFixed(2)+'</span></div>';
+  html += '</div>';
+
+  // Pedidos por cliente
+  html += '<div class="card">';
+  html += '<div class="card-title">🛒 Pedidos de la semana</div>';
+  var clientesPed = Object.keys(ventasPorCliente);
+  if(clientesPed.length){
+    clientesPed.forEach(function(c){
+      html += '<div class="linea-res"><span>'+c+'</span><span>$'+ventasPorCliente[c].toFixed(2)+'</span></div>';
+    });
+  } else {
+    html += '<div class="empty">Sin pedidos esta semana</div>';
+  }
+  html += '</div>';
+
+  // Cuentas por cobrar
+  html += '<div class="card">';
+  html += '<div class="card-title">💰 Cuentas por cobrar</div>';
+  var deudores = Object.keys(deudaPorCliente);
+  if(deudores.length){
+    var totalDeuda = 0;
+    deudores.forEach(function(c){
+      html += '<div class="linea-res"><span>'+c+'</span><span style="color:#c0392b;font-weight:700">$'+deudaPorCliente[c].toFixed(2)+'</span></div>';
+      totalDeuda += deudaPorCliente[c];
+    });
+    html += '<div class="total-res"><span>Total por cobrar</span><span style="color:#c0392b">$'+totalDeuda.toFixed(2)+'</span></div>';
+  } else {
+    html += '<div class="empty">Nadie debe esta semana ✓</div>';
+  }
+  html += '</div>';
+
+  document.getElementById('r-contenido').innerHTML = html;
+}
+
 // ====== INIT ======
 document.getElementById('c-total').addEventListener('input', actualizarResumenCobranza);
 document.getElementById('c-abono').addEventListener('input', actualizarResumenCobranza);
@@ -480,4 +617,3 @@ cargarDatos();
 </script>
 </body>
 </html>
-
