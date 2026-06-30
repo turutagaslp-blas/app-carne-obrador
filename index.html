@@ -91,7 +91,7 @@ textarea{height:54px;resize:none}
   <div id="paso1" class="screen active">
     <h2>Nuevo pedido</h2>
     <div class="sub">Elige la semana y el cliente</div>
-    <div class="semana-row"><label>Semana:</label><input type="text" id="semana" placeholder="ej: 30/05/2026"></div>
+    <div class="semana-row"><label>Día:</label><input type="date" id="semana"></div>
     <div class="label">Cliente</div>
     <div class="grid2" id="grid-clientes"><div class="cargando">Cargando clientes...</div></div>
     <br><button class="btn btn-azul" onclick="irPaso2()">Seleccionar piezas →</button>
@@ -125,9 +125,10 @@ textarea{height:54px;resize:none}
 <div id="vista-cobranza" class="screen">
   <h2>Registrar cobranza</h2>
   <div class="sub">Anota lo que pagó cada cliente</div>
-  <div class="semana-row"><label>Semana:</label><input type="text" id="c-semana" placeholder="ej: 30/05/2026"></div>
+  <div class="semana-row"><label>Día:</label><input type="date" id="c-semana"></div>
   <div class="label">Cliente</div>
   <div class="grid2" id="c-grid-clientes"><div class="cargando">Cargando...</div></div>
+  <div id="c-deudas"></div>
   <div class="label">Total facturado ($)</div>
   <input type="number" id="c-total" placeholder="Monto total de su pedido" inputmode="decimal">
   <div class="label">Abono recibido ($) — escribe 0 si no pagó</div>
@@ -148,7 +149,7 @@ textarea{height:54px;resize:none}
 <div id="vista-gastos" class="screen">
   <h2>Registrar gasto / compra</h2>
   <div class="sub">Egresos del negocio</div>
-  <div class="semana-row"><label>Semana:</label><input type="text" id="g-semana" placeholder="ej: 30/05/2026"></div>
+  <div class="semana-row"><label>Día:</label><input type="date" id="g-semana"></div>
   <div class="label">Tipo</div>
   <div class="grid2">
     <button class="btn-sel btn-tipo" id="g-btn-gasto" onclick="selTipo('Gasto')">💸 Gasto operativo</button>
@@ -175,7 +176,7 @@ textarea{height:54px;resize:none}
   <div class="sub">Pedidos, cobranza y balance</div>
   <div class="semana-row">
     <label>Semana:</label>
-    <input type="text" id="r-semana" placeholder="ej: 30/05/2026">
+    <input type="date" id="r-semana">
     <button class="btn-refresh" onclick="cargarResumen()">Ver</button>
   </div>
   <div id="r-contenido">
@@ -201,9 +202,16 @@ var BACKEND = 'https://script.google.com/macros/s/AKfycbz7-FCCqh1PmKuovw9fTqO1c8
 // ====== ESTADO ======
 var clientes = [], cortes = [], preciosMatriz = {};
 var cortesActivos = {}, pedidos = [], clienteActual = '', preciosCliente = {};
+var clientesYaPedido = [];
 var tipoActual = '';
 
 // ====== UTILIDADES ======
+function convertirFecha(iso){
+  if(!iso) return '';
+  var p = iso.split('-');
+  if(p.length !== 3) return iso;
+  return p[2] + '/' + p[1] + '/' + p[0];
+}
 function toast(msg, esError){
   var t = document.getElementById('toast');
   t.textContent = msg;
@@ -289,13 +297,32 @@ function cambiarVista(v){
 function renderClientes(){
   var g = document.getElementById('grid-clientes'); g.innerHTML='';
   clientes.forEach(function(c){
-    var usados = pedidos.map(function(p){ return p.cliente; });
+    var usadosLocal = pedidos.map(function(p){ return p.cliente; });
+    var yaPedido = usadosLocal.indexOf(c)>=0 || clientesYaPedido.indexOf(c)>=0;
     var b = document.createElement('button');
-    b.className = 'btn-sel' + (clienteActual===c?' sel':'') + (usados.indexOf(c)>=0?' hecho':'');
-    b.textContent = (usados.indexOf(c)>=0?'✓ ':'') + c;
+    b.className = 'btn-sel' + (clienteActual===c?' sel':'') + (yaPedido?' hecho':'');
+    b.textContent = (yaPedido?'✓ ':'') + c;
     b.onclick = function(){ clienteActual=c; renderClientes(); };
     g.appendChild(b);
   });
+}
+
+function cargarPedidosDelDia(){
+  var semISO = document.getElementById('semana').value;
+  if(!semISO){ clientesYaPedido = []; renderClientes(); return; }
+  var sem = convertirFecha(semISO);
+  fetch(sheetURL('Pedidos!A3:H202'))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var filas = d.values || [];
+      var setClientes = {};
+      filas.forEach(function(row){
+        if(row[1] === sem && row[2]) setClientes[row[2]] = true;
+      });
+      clientesYaPedido = Object.keys(setClientes);
+      renderClientes();
+    })
+    .catch(function(){ clientesYaPedido = []; renderClientes(); });
 }
 
 function setPaso(n){
@@ -307,8 +334,9 @@ function setPaso(n){
 }
 
 function irPaso2(){
-  var sem = document.getElementById('semana').value.trim();
-  if(!sem){ toast('Escribe la semana primero', true); return; }
+  var semISO = document.getElementById('semana').value;
+  if(!semISO){ toast('Elige el día primero', true); return; }
+  var sem = convertirFecha(semISO);
   if(!clienteActual){ toast('Selecciona un cliente', true); return; }
   cortesActivos = {};
   preciosCliente = getPreciosCliente(clienteActual);
@@ -359,7 +387,7 @@ function guardarPedido(){
   var lineas = keys.map(function(c){
     return {corte:c, kg:parseFloat(cortesActivos[c].kg)||0, precio:parseFloat(cortesActivos[c].precio)||0};
   }).filter(function(l){ return l.kg>0; });
-  var sem = document.getElementById('semana').value.trim();
+  var sem = convertirFecha(document.getElementById('semana').value);
   var datos = {
     fecha: new Date().toISOString(),
     semana: sem,
@@ -415,6 +443,37 @@ function renderClientesCobranza(){
   });
 }
 
+function cargarDeudasCobranza(){
+  var semISO = document.getElementById('c-semana').value;
+  var cont = document.getElementById('c-deudas');
+  if(!semISO){ cont.innerHTML=''; return; }
+  var sem = convertirFecha(semISO);
+  cont.innerHTML = '<div class="cargando">Buscando deudas...</div>';
+  fetch(sheetURL('Cobranza!A3:H202'))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var filas = d.values || [];
+      var deuda = {};
+      filas.forEach(function(row){
+        if(row[1] !== sem) return;
+        var cli = row[2];
+        var saldo = parseFloat(row[6]) || 0;
+        if(saldo > 0) deuda[cli] = (deuda[cli]||0) + saldo;
+      });
+      var clientesDeuda = Object.keys(deuda);
+      if(!clientesDeuda.length){ cont.innerHTML=''; return; }
+      var html = '<div class="label">Quién debe este día</div><div class="card">';
+      var total = 0;
+      clientesDeuda.forEach(function(c){
+        html += '<div class="linea-res"><span>'+c+'</span><span style="color:#c0392b;font-weight:700">$'+deuda[c].toFixed(2)+'</span></div>';
+        total += deuda[c];
+      });
+      html += '<div class="total-res"><span>Total por cobrar</span><span style="color:#c0392b">$'+total.toFixed(2)+'</span></div></div>';
+      cont.innerHTML = html;
+    })
+    .catch(function(){ cont.innerHTML=''; });
+}
+
 function actualizarResumenCobranza(){
   var total = parseFloat(document.getElementById('c-total').value)||0;
   var abono = parseFloat(document.getElementById('c-abono').value)||0;
@@ -431,8 +490,8 @@ function actualizarResumenCobranza(){
 }
 
 function guardarCobranza(){
-  var sem = document.getElementById('c-semana').value.trim();
-  if(!sem){ toast('Escribe la semana', true); return; }
+  var sem = convertirFecha(document.getElementById('c-semana').value);
+  if(!sem){ toast('Elige el día', true); return; }
   if(!cClienteActual){ toast('Selecciona un cliente', true); return; }
   var total = parseFloat(document.getElementById('c-total').value)||0;
   var abono = parseFloat(document.getElementById('c-abono').value)||0;
@@ -455,6 +514,7 @@ function guardarCobranza(){
     document.getElementById('c-nota').value='';
     document.getElementById('c-resumen').style.display='none';
     renderClientesCobranza();
+    cargarDeudasCobranza();
     toast('✓ Cobranza guardada');
   });
 }
@@ -475,8 +535,8 @@ function selTipo(tipo){
 }
 
 function guardarGasto(){
-  var sem = document.getElementById('g-semana').value.trim();
-  if(!sem){ toast('Escribe la semana', true); return; }
+  var sem = convertirFecha(document.getElementById('g-semana').value);
+  if(!sem){ toast('Elige el día', true); return; }
   if(!tipoActual){ toast('Selecciona el tipo', true); return; }
   var concepto = document.getElementById('g-concepto').value;
   if(!concepto){ toast('Selecciona el concepto', true); return; }
@@ -509,8 +569,8 @@ function guardarGasto(){
 
 // ====== RESUMEN ======
 function cargarResumen(){
-  var sem = document.getElementById('r-semana').value.trim();
-  if(!sem){ toast('Escribe la semana a consultar', true); return; }
+  var sem = convertirFecha(document.getElementById('r-semana').value);
+  if(!sem){ toast('Elige el día a consultar', true); return; }
   var cont = document.getElementById('r-contenido');
   cont.innerHTML = '<div class="cargando">Cargando datos de la semana...</div>';
 
@@ -611,6 +671,8 @@ function renderResumenData(sem, pedidos, cobranza, gastos){
 }
 
 // ====== INIT ======
+document.getElementById('semana').addEventListener('change', cargarPedidosDelDia);
+document.getElementById('c-semana').addEventListener('change', cargarDeudasCobranza);
 document.getElementById('c-total').addEventListener('input', actualizarResumenCobranza);
 document.getElementById('c-abono').addEventListener('input', actualizarResumenCobranza);
 cargarDatos();
