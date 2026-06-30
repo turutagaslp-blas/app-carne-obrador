@@ -109,7 +109,7 @@ textarea{height:54px;resize:none}
       <textarea id="nota-pedido" placeholder="Ej: entregar antes del mediodía"></textarea>
     </div>
     <div id="empty-cortes" class="empty">Toca los cortes de arriba para agregarlos</div>
-    <button class="btn btn-verde" onclick="guardarPedido()">Guardar pedido ✓</button>
+    <button id="btn-guardar-pedido" class="btn btn-verde" onclick="guardarPedido()">Guardar pedido ✓</button>
     <button class="btn btn-gris" onclick="setPaso(1)">← Cambiar cliente</button>
   </div>
 
@@ -142,7 +142,7 @@ textarea{height:54px;resize:none}
   </div>
   <div class="label">Nota (opcional)</div>
   <textarea id="c-nota" placeholder="Ej: pagó con billete de 500"></textarea>
-  <button class="btn btn-verde" onclick="guardarCobranza()">Guardar cobranza ✓</button>
+  <button id="btn-guardar-cobranza" class="btn btn-verde" onclick="guardarCobranza()">Guardar cobranza ✓</button>
 </div>
 
 <!-- ===== GASTOS ===== -->
@@ -167,7 +167,7 @@ textarea{height:54px;resize:none}
   <input type="number" id="g-monto" placeholder="0.00" inputmode="decimal">
   <div class="label">Nota (opcional)</div>
   <textarea id="g-nota" placeholder="Ej: 2 canales de proveedor Pérez"></textarea>
-  <button class="btn btn-naranja" onclick="guardarGasto()">Guardar gasto ✓</button>
+  <button id="btn-guardar-gasto" class="btn btn-naranja" onclick="guardarGasto()">Guardar gasto ✓</button>
 </div>
 
 <!-- ===== RESUMEN ===== -->
@@ -220,20 +220,33 @@ function toast(msg, esError){
   setTimeout(function(){ t.style.display = 'none'; }, 2600);
 }
 
+function bloquearBoton(id, textoEspera){
+  var b = document.getElementById(id);
+  if(b){ b.disabled = true; b.dataset.txt = b.textContent; b.textContent = textoEspera; b.style.opacity = '0.6'; }
+}
+function liberarBoton(id){
+  var b = document.getElementById(id);
+  if(b){ b.disabled = false; if(b.dataset.txt) b.textContent = b.dataset.txt; b.style.opacity = '1'; }
+}
+
 function sheetURL(rango){
   return 'https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID +
     '/values/' + encodeURIComponent(rango) + '?key=' + API_KEY;
 }
 
-function guardarEnSheet(action, datos, onOk){
+function guardarEnSheet(action, datos, onOk, botonId){
   var url = BACKEND + '?action=' + action + '&datos=' + encodeURIComponent(JSON.stringify(datos));
   fetch(url)
     .then(function(r){ return r.json(); })
     .then(function(resp){
+      if(botonId) liberarBoton(botonId);
       if(resp.status === 'ok'){ onOk(); }
       else { toast('Error: ' + (resp.mensaje||'no se pudo guardar'), true); }
     })
-    .catch(function(err){ toast('Error de conexión: ' + err.message, true); });
+    .catch(function(err){
+      if(botonId) liberarBoton(botonId);
+      toast('Error de conexión: ' + err.message, true);
+    });
 }
 
 // ====== CARGA INICIAL ======
@@ -395,6 +408,7 @@ function guardarPedido(){
     lineas: lineas,
     nota: document.getElementById('nota-pedido').value.trim()
   };
+  bloquearBoton('btn-guardar-pedido', 'Guardando...');
   guardarEnSheet('guardarPedido', datos, function(){
     pedidos.push(datos);
     // Actualizar matriz local de precios
@@ -404,7 +418,7 @@ function guardarPedido(){
     renderResumen();
     toast('✓ Pedido guardado');
     setPaso(3);
-  });
+  }, 'btn-guardar-pedido');
 }
 
 function renderResumen(){
@@ -506,6 +520,7 @@ function guardarCobranza(){
     formaPago: abono>0?pago:'Sin pago',
     nota: document.getElementById('c-nota').value.trim()
   };
+  bloquearBoton('btn-guardar-cobranza', 'Guardando...');
   guardarEnSheet('guardarCobranza', datos, function(){
     cClienteActual='';
     document.getElementById('c-total').value='';
@@ -516,7 +531,7 @@ function guardarCobranza(){
     renderClientesCobranza();
     cargarDeudasCobranza();
     toast('✓ Cobranza guardada');
-  });
+  }, 'btn-guardar-cobranza');
 }
 
 // ====== GASTOS ======
@@ -551,6 +566,7 @@ function guardarGasto(){
     concepto: conceptoFinal, kg: tipoActual==='Compra Canal'?kg:'',
     monto: monto, nota: document.getElementById('g-nota').value.trim()
   };
+  bloquearBoton('btn-guardar-gasto', 'Guardando...');
   guardarEnSheet('guardarGasto', datos, function(){
     tipoActual='';
     document.getElementById('g-btn-gasto').className='btn-sel btn-tipo';
@@ -563,7 +579,7 @@ function guardarGasto(){
     selTipo('');
     document.getElementById('g-concepto').value='';
     toast('✓ Gasto guardado');
-  });
+  }, 'btn-guardar-gasto');
 }
 
 
