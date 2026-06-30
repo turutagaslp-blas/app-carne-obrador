@@ -75,6 +75,26 @@ textarea{height:54px;resize:none}
 .deuda-monto{font-size:15px;font-weight:800;color:#c0392b}
 .deuda-monto.cero{color:#70AD47}
 .btn-refresh{background:#fff;border:1.5px solid #2E75B6;color:#2E75B6;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;width:auto;display:inline-flex;align-items:center;gap:5px;margin:0}
+.label-row{display:flex;justify-content:space-between;align-items:center}
+.link-gestionar{font-size:11px;color:#2E75B6;font-weight:600;cursor:pointer;text-transform:none;letter-spacing:0;background:#EBF3FB;padding:4px 10px;border-radius:6px}
+.link-gestionar:active{background:#d6e7f7}
+.modal-bg{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:300;padding:16px;overflow-y:auto}
+.modal-bg.open{display:block}
+.modal{background:#f8f9fa;border-radius:14px;max-width:480px;margin:20px auto;padding:16px;min-height:200px}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.modal-head h2{font-size:16px;color:#1F3864}
+.modal-close{background:none;border:none;font-size:26px;color:#888;cursor:pointer;line-height:1}
+.cat-item{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px 12px;margin-bottom:6px}
+.cat-item span.nom{flex:1;font-size:14px;font-weight:600;color:#1F3864}
+.cat-item input{flex:1;border:1.5px solid #2E75B6;border-radius:6px;padding:6px 8px;font-size:14px;margin:0}
+.cat-acciones{display:flex;gap:14px;align-items:center}
+.cat-acciones .ed{color:#2E75B6;cursor:pointer;font-size:13px;font-weight:600}
+.cat-acciones .bo{color:#c0392b;cursor:pointer;font-size:13px;font-weight:600}
+.cat-acciones .gu{color:#375623;cursor:pointer;font-size:13px;font-weight:700}
+.cat-acciones .ca{color:#888;cursor:pointer;font-size:13px}
+.agregar-row{display:flex;gap:6px;margin-bottom:14px}
+.agregar-row input{flex:1;margin:0;border:1.5px solid #ddd;border-radius:8px;padding:10px;font-size:15px}
+.agregar-row button{background:#70AD47;color:#fff;border:none;border-radius:8px;padding:0 16px;font-size:14px;font-weight:600;cursor:pointer}
 </style>
 </head>
 <body>
@@ -92,7 +112,7 @@ textarea{height:54px;resize:none}
     <h2>Nuevo pedido</h2>
     <div class="sub">Elige la semana y el cliente</div>
     <div class="semana-row"><label>Día:</label><input type="date" id="semana"></div>
-    <div class="label">Cliente</div>
+    <div class="label label-row">Cliente <span class="link-gestionar" onclick="abrirGestion('cliente')">+ Gestionar</span></div>
     <div class="grid2" id="grid-clientes"><div class="cargando">Cargando clientes...</div></div>
     <br><button class="btn btn-azul" onclick="irPaso2()">Seleccionar piezas →</button>
   </div>
@@ -100,7 +120,7 @@ textarea{height:54px;resize:none}
   <div id="paso2" class="screen">
     <h2 id="titulo-p2">Pedido de —</h2>
     <div class="sub">Toca los cortes y anota los kilos</div>
-    <div class="label">Cortes</div>
+    <div class="label label-row">Cortes <span class="link-gestionar" onclick="abrirGestion('corte')">+ Gestionar</span></div>
     <div class="grid2" id="grid-cortes"></div>
     <div id="lineas-wrap" style="display:none">
       <div class="label">Kilos y precio por corte</div>
@@ -124,25 +144,28 @@ textarea{height:54px;resize:none}
 <!-- ===== COBRANZA ===== -->
 <div id="vista-cobranza" class="screen">
   <h2>Registrar cobranza</h2>
-  <div class="sub">Anota lo que pagó cada cliente</div>
+  <div class="sub">Elige el día y el cliente para ver su cuenta</div>
   <div class="semana-row"><label>Día:</label><input type="date" id="c-semana"></div>
   <div class="label">Cliente</div>
   <div class="grid2" id="c-grid-clientes"><div class="cargando">Cargando...</div></div>
-  <div id="c-deudas"></div>
-  <div class="label">Total facturado ($)</div>
-  <input type="number" id="c-total" placeholder="Monto total de su pedido" inputmode="decimal">
-  <div class="label">Abono recibido ($) — escribe 0 si no pagó</div>
-  <input type="number" id="c-abono" placeholder="0" inputmode="decimal">
-  <div class="label">Forma de pago</div>
-  <select id="c-pago"><option value="">-- Selecciona --</option><option>Efectivo</option><option>Transferencia</option></select>
-  <div id="c-resumen" class="resumen-box" style="display:none">
-    <div class="linea-res"><span>Total facturado</span><span id="cr-total">$0</span></div>
-    <div class="linea-res"><span>Abono</span><span id="cr-abono">$0</span></div>
-    <div class="linea-res total-res saldo" id="cr-saldo-row"><span>Saldo pendiente</span><span id="cr-saldo">$0</span></div>
+
+  <div id="c-estado-cuenta" style="display:none">
+    <div class="resumen-box">
+      <div class="linea-res"><span>Total facturado</span><span id="cc-facturado">$0</span></div>
+      <div class="linea-res"><span>Ya pagado</span><span id="cc-pagado" style="color:#375623;font-weight:700">$0</span></div>
+      <div class="linea-res total-res saldo" id="cc-resta-row"><span>Resta por pagar</span><span id="cc-resta">$0</span></div>
+    </div>
+
+    <div class="label">Nuevo abono ($)</div>
+    <input type="number" id="c-abono" placeholder="0" inputmode="decimal">
+    <div class="label">Forma de pago</div>
+    <select id="c-pago"><option value="">-- Selecciona --</option><option>Efectivo</option><option>Transferencia</option></select>
+    <div class="label">Nota (opcional)</div>
+    <textarea id="c-nota" placeholder="Ej: pagó con billete de 500"></textarea>
+    <button id="btn-guardar-cobranza" class="btn btn-verde" onclick="guardarCobranza()">Guardar abono ✓</button>
   </div>
-  <div class="label">Nota (opcional)</div>
-  <textarea id="c-nota" placeholder="Ej: pagó con billete de 500"></textarea>
-  <button id="btn-guardar-cobranza" class="btn btn-verde" onclick="guardarCobranza()">Guardar cobranza ✓</button>
+
+  <div id="c-deudas"></div>
 </div>
 
 <!-- ===== GASTOS ===== -->
@@ -184,6 +207,20 @@ textarea{height:54px;resize:none}
   </div>
 </div>
 
+</div>
+
+<div id="modal-gestion" class="modal-bg">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modal-titulo">Gestionar</h2>
+      <button class="modal-close" onclick="cerrarGestion()">&times;</button>
+    </div>
+    <div class="agregar-row">
+      <input type="text" id="nuevo-cat" placeholder="Nombre nuevo">
+      <button id="btn-agregar-cat" onclick="agregarCat()">Agregar</button>
+    </div>
+    <div id="lista-cat"></div>
+  </div>
 </div>
 
 <div class="nav">
@@ -446,14 +483,49 @@ function nuevoPedido(){
 
 // ====== COBRANZA ======
 var cClienteActual = '';
+var cFacturado = 0, cPagado = 0;
 function renderClientesCobranza(){
   var g = document.getElementById('c-grid-clientes'); g.innerHTML='';
   clientes.forEach(function(c){
     var b = document.createElement('button');
     b.className = 'btn-sel' + (cClienteActual===c?' sel':'');
     b.textContent = c;
-    b.onclick = function(){ cClienteActual=c; renderClientesCobranza(); };
+    b.onclick = function(){ cClienteActual=c; renderClientesCobranza(); cargarEstadoCuenta(); };
     g.appendChild(b);
+  });
+}
+
+function cargarEstadoCuenta(){
+  var semISO = document.getElementById('c-semana').value;
+  var caja = document.getElementById('c-estado-cuenta');
+  if(!semISO || !cClienteActual){ caja.style.display='none'; return; }
+  var sem = convertirFecha(semISO);
+  caja.style.display='block';
+  document.getElementById('cc-facturado').textContent = 'Cargando...';
+  document.getElementById('cc-pagado').textContent = '';
+  document.getElementById('cc-resta').textContent = '';
+
+  // Leer facturado (Pedidos) y pagado (Cobranza) en paralelo
+  Promise.all([
+    fetch(sheetURL('Pedidos!A3:H202')).then(function(r){return r.json();}),
+    fetch(sheetURL('Cobranza!A3:H202')).then(function(r){return r.json();})
+  ]).then(function(res){
+    var pedidos = res[0].values || [];
+    var cobranza = res[1].values || [];
+    cFacturado = 0; cPagado = 0;
+    pedidos.forEach(function(row){
+      if(row[1]===sem && row[2]===cClienteActual) cFacturado += parseFloat(row[6])||0;
+    });
+    cobranza.forEach(function(row){
+      if(row[1]===sem && row[2]===cClienteActual) cPagado += parseFloat(row[4])||0;
+    });
+    var resta = cFacturado - cPagado;
+    document.getElementById('cc-facturado').textContent = '$'+cFacturado.toFixed(2);
+    document.getElementById('cc-pagado').textContent = '$'+cPagado.toFixed(2);
+    document.getElementById('cc-resta').textContent = '$'+resta.toFixed(2);
+    document.getElementById('cc-resta-row').className = 'linea-res total-res saldo'+(resta>0?' rojo':'');
+  }).catch(function(){
+    document.getElementById('cc-facturado').textContent = 'Error al cargar';
   });
 }
 
@@ -488,49 +560,33 @@ function cargarDeudasCobranza(){
     .catch(function(){ cont.innerHTML=''; });
 }
 
-function actualizarResumenCobranza(){
-  var total = parseFloat(document.getElementById('c-total').value)||0;
-  var abono = parseFloat(document.getElementById('c-abono').value)||0;
-  if(total>0){
-    document.getElementById('c-resumen').style.display='block';
-    document.getElementById('cr-total').textContent='$'+total.toFixed(2);
-    document.getElementById('cr-abono').textContent='$'+abono.toFixed(2);
-    var saldo = total-abono;
-    document.getElementById('cr-saldo').textContent='$'+saldo.toFixed(2);
-    document.getElementById('cr-saldo-row').className='linea-res total-res saldo'+(saldo>0?' rojo':'');
-  } else {
-    document.getElementById('c-resumen').style.display='none';
-  }
-}
 
 function guardarCobranza(){
   var sem = convertirFecha(document.getElementById('c-semana').value);
   if(!sem){ toast('Elige el día', true); return; }
   if(!cClienteActual){ toast('Selecciona un cliente', true); return; }
-  var total = parseFloat(document.getElementById('c-total').value)||0;
+  if(cFacturado<=0){ toast('Este cliente no tiene pedido ese día', true); return; }
   var abono = parseFloat(document.getElementById('c-abono').value)||0;
   var pago = document.getElementById('c-pago').value;
-  if(total<=0){ toast('El total facturado debe ser mayor a 0', true); return; }
-  if(abono<0){ toast('El abono no puede ser negativo', true); return; }
-  if(abono>total){ toast('El abono no puede ser mayor al total', true); return; }
-  if(abono>0 && !pago){ toast('Selecciona la forma de pago', true); return; }
+  var resta = cFacturado - cPagado;
+  if(abono<=0){ toast('Escribe el abono que está pagando', true); return; }
+  if(abono>resta+0.01){ toast('El abono no puede ser mayor a lo que resta ($'+resta.toFixed(2)+')', true); return; }
+  if(!pago){ toast('Selecciona la forma de pago', true); return; }
+  var saldoDespues = cFacturado - (cPagado + abono);
   var datos = {
     fecha: new Date().toISOString(), semana: sem, cliente: cClienteActual,
-    totalFacturado: total, abono: abono,
-    formaPago: abono>0?pago:'Sin pago',
+    totalFacturado: cFacturado, abono: abono,
+    formaPago: pago,
     nota: document.getElementById('c-nota').value.trim()
   };
   bloquearBoton('btn-guardar-cobranza', 'Guardando...');
   guardarEnSheet('guardarCobranza', datos, function(){
-    cClienteActual='';
-    document.getElementById('c-total').value='';
     document.getElementById('c-abono').value='';
     document.getElementById('c-pago').value='';
     document.getElementById('c-nota').value='';
-    document.getElementById('c-resumen').style.display='none';
-    renderClientesCobranza();
+    cargarEstadoCuenta();
     cargarDeudasCobranza();
-    toast('✓ Cobranza guardada');
+    toast(saldoDespues<=0.01 ? '✓ Pagado completo' : '✓ Abono guardado');
   }, 'btn-guardar-cobranza');
 }
 
@@ -686,11 +742,108 @@ function renderResumenData(sem, pedidos, cobranza, gastos){
   document.getElementById('r-contenido').innerHTML = html;
 }
 
+// ====== GESTIÓN DE CATÁLOGOS ======
+var gestionTipo = 'cliente'; // 'cliente' o 'corte'
+var gestionEditando = null;  // nombre que se está editando
+
+function abrirGestion(tipo){
+  gestionTipo = tipo;
+  gestionEditando = null;
+  document.getElementById('modal-titulo').textContent = tipo==='cliente' ? 'Gestionar clientes' : 'Gestionar piezas';
+  document.getElementById('nuevo-cat').value = '';
+  document.getElementById('nuevo-cat').placeholder = tipo==='cliente' ? 'Nombre del cliente' : 'Nombre de la pieza';
+  document.getElementById('modal-gestion').className = 'modal-bg open';
+  renderListaCat();
+}
+
+function cerrarGestion(){
+  document.getElementById('modal-gestion').className = 'modal-bg';
+  gestionEditando = null;
+}
+
+function renderListaCat(){
+  var lista = (gestionTipo==='cliente') ? clientes : cortes;
+  var cont = document.getElementById('lista-cat');
+  if(!lista.length){ cont.innerHTML='<div class="empty">Sin elementos aún</div>'; return; }
+  cont.innerHTML = '';
+  lista.forEach(function(nombre){
+    var div = document.createElement('div');
+    div.className = 'cat-item';
+    if(gestionEditando === nombre){
+      div.innerHTML = '<input type="text" id="edit-input" value="'+nombre.replace(/"/g,'&quot;')+'">'+
+        '<div class="cat-acciones"><span class="gu" onclick="guardarEdicion(\''+nombre.replace(/'/g,"\\'")+'\')">Guardar</span>'+
+        '<span class="ca" onclick="cancelarEdicion()">Cancelar</span></div>';
+    } else {
+      div.innerHTML = '<span class="nom">'+nombre+'</span>'+
+        '<div class="cat-acciones">'+
+        '<span class="ed" onclick="iniciarEdicion(\''+nombre.replace(/'/g,"\\'")+'\')">Editar</span>'+
+        '<span class="bo" onclick="confirmarBorrar(\''+nombre.replace(/'/g,"\\'")+'\')">Borrar</span></div>';
+    }
+    cont.appendChild(div);
+  });
+}
+
+function agregarCat(){
+  var nombre = document.getElementById('nuevo-cat').value.trim();
+  if(!nombre){ toast('Escribe un nombre', true); return; }
+  var lista = (gestionTipo==='cliente') ? clientes : cortes;
+  if(lista.some(function(v){ return v.toLowerCase()===nombre.toLowerCase(); })){
+    toast('Ese nombre ya existe', true); return;
+  }
+  bloquearBoton('btn-agregar-cat','...');
+  guardarEnSheet('agregarCatalogo', {tipo:gestionTipo, nombre:nombre}, function(){
+    if(gestionTipo==='cliente') clientes.push(nombre);
+    else cortes.push(nombre);
+    document.getElementById('nuevo-cat').value='';
+    renderListaCat();
+    refrescarGrids();
+    toast('✓ Agregado');
+  }, 'btn-agregar-cat');
+}
+
+function iniciarEdicion(nombre){ gestionEditando = nombre; renderListaCat(); setTimeout(function(){ var i=document.getElementById('edit-input'); if(i) i.focus(); },50); }
+function cancelarEdicion(){ gestionEditando = null; renderListaCat(); }
+
+function guardarEdicion(viejo){
+  var nuevo = document.getElementById('edit-input').value.trim();
+  if(!nuevo){ toast('Escribe un nombre', true); return; }
+  if(nuevo === viejo){ cancelarEdicion(); return; }
+  var lista = (gestionTipo==='cliente') ? clientes : cortes;
+  if(lista.some(function(v){ return v.toLowerCase()===nuevo.toLowerCase(); })){
+    toast('Ese nombre ya existe', true); return;
+  }
+  guardarEnSheet('editarCatalogo', {tipo:gestionTipo, viejo:viejo, nuevo:nuevo}, function(){
+    var arr = (gestionTipo==='cliente') ? clientes : cortes;
+    var idx = arr.indexOf(viejo);
+    if(idx>=0) arr[idx] = nuevo;
+    gestionEditando = null;
+    renderListaCat();
+    refrescarGrids();
+    toast('✓ Editado');
+  });
+}
+
+function confirmarBorrar(nombre){
+  if(!confirm('¿Seguro que quieres borrar a "'+nombre+'"?\n\nLos pedidos viejos no se borran, solo deja de aparecer en las listas.')) return;
+  guardarEnSheet('borrarCatalogo', {tipo:gestionTipo, nombre:nombre}, function(){
+    var arr = (gestionTipo==='cliente') ? clientes : cortes;
+    var idx = arr.indexOf(nombre);
+    if(idx>=0) arr.splice(idx,1);
+    renderListaCat();
+    refrescarGrids();
+    toast('✓ Borrado');
+  });
+}
+
+function refrescarGrids(){
+  renderClientes();
+  renderClientesCobranza();
+  if(cortes.length) renderCortes();
+}
+
 // ====== INIT ======
 document.getElementById('semana').addEventListener('change', cargarPedidosDelDia);
-document.getElementById('c-semana').addEventListener('change', cargarDeudasCobranza);
-document.getElementById('c-total').addEventListener('input', actualizarResumenCobranza);
-document.getElementById('c-abono').addEventListener('input', actualizarResumenCobranza);
+document.getElementById('c-semana').addEventListener('change', function(){ cargarDeudasCobranza(); cargarEstadoCuenta(); });
 cargarDatos();
 </script>
 </body>
