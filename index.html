@@ -193,17 +193,17 @@ textarea{height:54px;resize:none}
   <button id="btn-guardar-gasto" class="btn btn-naranja" onclick="guardarGasto()">Guardar gasto ✓</button>
 </div>
 
-<!-- ===== RESUMEN ===== -->
+<!-- ===== BALANCE ===== -->
 <div id="vista-resumen" class="screen">
-  <h2>Resumen de la semana</h2>
-  <div class="sub">Pedidos, cobranza y balance</div>
+  <h2>Balance del fin de semana</h2>
+  <div class="sub">Ingresos, egresos y utilidad</div>
   <div class="semana-row">
-    <label>Semana:</label>
+    <label>Día:</label>
     <input type="date" id="r-semana">
     <button class="btn-refresh" onclick="cargarResumen()">Ver</button>
   </div>
   <div id="r-contenido">
-    <div class="empty">Escribe la semana y toca "Ver"</div>
+    <div class="empty">Elige el día y toca "Ver"</div>
   </div>
 </div>
 
@@ -227,7 +227,7 @@ textarea{height:54px;resize:none}
   <button id="nav-pedidos" class="active" onclick="cambiarVista('pedidos')"><span class="ico">🛒</span>Pedidos</button>
   <button id="nav-cobranza" onclick="cambiarVista('cobranza')"><span class="ico">💰</span>Cobranza</button>
   <button id="nav-gastos" onclick="cambiarVista('gastos')"><span class="ico">📦</span>Gastos</button>
-  <button id="nav-resumen" onclick="cambiarVista('resumen')"><span class="ico">📊</span>Resumen</button>
+  <button id="nav-resumen" onclick="cambiarVista('resumen')"><span class="ico">📊</span>Balance</button>
 </div>
 
 <script>
@@ -344,7 +344,7 @@ function cambiarVista(v){
     document.getElementById('vista-'+x).className = 'screen' + (x===v?' active':'');
     document.getElementById('nav-'+x).className = (x===v?'active':'');
   });
-  var titulos = {pedidos:'Levantar Pedidos', cobranza:'Registrar Cobranza', gastos:'Registrar Gastos', resumen:'Resumen'};
+  var titulos = {pedidos:'Levantar Pedidos', cobranza:'Registrar Cobranza', gastos:'Registrar Gastos', resumen:'Balance'};
   document.getElementById('topbar-title').textContent = titulos[v];
 }
 
@@ -670,77 +670,98 @@ function cargarResumen(){
 }
 
 function renderResumenData(sem, pedidos, cobranza, gastos){
-  // PEDIDOS de la semana: agrupar por cliente
-  var ventasPorCliente = {};
-  var totalVendido = 0;
-  pedidos.forEach(function(row){
-    if(row[1] !== sem) return; // columna B = semana
-    var cliente = row[2];
-    var total = limpiarNumero(row[6]); // columna G = total
-    ventasPorCliente[cliente] = (ventasPorCliente[cliente]||0) + total;
-    totalVendido += total;
-  });
-
-  // COBRANZA de la semana: cobrado y deuda por cliente
-  var totalCobrado = 0;
-  var deudaPorCliente = {};
+  // INGRESOS: lo COBRADO por cliente (abonos), agrupado
+  var cobradoPorCliente = {};
+  var totalIngresos = 0;
   cobranza.forEach(function(row){
     if(row[1] !== sem) return;
     var cliente = row[2];
-    var abono = limpiarNumero(row[4]); // columna E = abono
-    var saldo = limpiarNumero(row[6]); // columna G = saldo pendiente
-    totalCobrado += abono;
-    if(saldo > 0) deudaPorCliente[cliente] = (deudaPorCliente[cliente]||0) + saldo;
+    var abono = limpiarNumero(row[4]); // col E = abono
+    if(abono > 0){
+      cobradoPorCliente[cliente] = (cobradoPorCliente[cliente]||0) + abono;
+      totalIngresos += abono;
+    }
   });
 
-  // GASTOS de la semana
-  var totalGastos = 0;
+  // EGRESOS: gastos por concepto, agrupado
+  var gastoPorConcepto = {};
+  var totalEgresos = 0;
   gastos.forEach(function(row){
     if(row[1] !== sem) return;
-    var monto = limpiarNumero(row[5]); // columna F = monto
-    totalGastos += monto;
+    var concepto = row[3] || 'Otro'; // col D = concepto
+    var monto = limpiarNumero(row[5]); // col F = monto
+    gastoPorConcepto[concepto] = (gastoPorConcepto[concepto]||0) + monto;
+    totalEgresos += monto;
   });
 
-  var utilidad = totalCobrado - totalGastos;
+  var utilidadNeta = totalIngresos - totalEgresos;
 
-  // Construir HTML
+  // PENDIENTE POR COBRAR: facturado (Pedidos) - pagado (Cobranza), por cliente
+  var facturadoPorCliente = {};
+  pedidos.forEach(function(row){
+    if(row[1] !== sem) return;
+    var cliente = row[2];
+    facturadoPorCliente[cliente] = (facturadoPorCliente[cliente]||0) + limpiarNumero(row[6]);
+  });
+  var pagadoPorCliente = {};
+  cobranza.forEach(function(row){
+    if(row[1] !== sem) return;
+    var cliente = row[2];
+    pagadoPorCliente[cliente] = (pagadoPorCliente[cliente]||0) + limpiarNumero(row[4]);
+  });
+  var pendientePorCliente = {};
+  var totalPendiente = 0;
+  Object.keys(facturadoPorCliente).forEach(function(c){
+    var pend = facturadoPorCliente[c] - (pagadoPorCliente[c]||0);
+    if(pend > 0.01){ pendientePorCliente[c] = pend; totalPendiente += pend; }
+  });
+
   var html = '';
 
-  // Balance
+  // ===== INGRESOS (verde) =====
   html += '<div class="card">';
-  html += '<div class="card-title">📊 Balance de la semana</div>';
-  html += '<div class="linea-res"><span>Total vendido</span><span>$'+totalVendido.toFixed(2)+'</span></div>';
-  html += '<div class="linea-res"><span>Total cobrado</span><span style="color:#375623;font-weight:700">$'+totalCobrado.toFixed(2)+'</span></div>';
-  html += '<div class="linea-res"><span>Total gastos</span><span style="color:#c0392b">-$'+totalGastos.toFixed(2)+'</span></div>';
-  html += '<div class="total-res"><span>Utilidad (cobrado - gastos)</span><span style="color:'+(utilidad>=0?'#375623':'#c0392b')+'">$'+utilidad.toFixed(2)+'</span></div>';
-  html += '</div>';
-
-  // Pedidos por cliente
-  html += '<div class="card">';
-  html += '<div class="card-title">🛒 Pedidos de la semana</div>';
-  var clientesPed = Object.keys(ventasPorCliente);
-  if(clientesPed.length){
-    clientesPed.forEach(function(c){
-      html += '<div class="linea-res"><span>'+c+'</span><span>$'+ventasPorCliente[c].toFixed(2)+'</span></div>';
+  html += '<div class="card-title" style="color:#375623">Ingresos</div>';
+  var clientesCob = Object.keys(cobradoPorCliente);
+  if(clientesCob.length){
+    clientesCob.forEach(function(c){
+      html += '<div class="linea-res"><span style="color:#375623">+ '+c+'</span><span style="color:#375623;font-weight:700">$'+cobradoPorCliente[c].toFixed(2)+'</span></div>';
     });
   } else {
-    html += '<div class="empty">Sin pedidos esta semana</div>';
+    html += '<div class="empty">Sin ingresos este día</div>';
   }
+  html += '<div class="total-res"><span>Utilidad Bruta</span><span style="color:#375623">$'+totalIngresos.toFixed(2)+'</span></div>';
   html += '</div>';
 
-  // Cuentas por cobrar
+  // ===== EGRESOS (rojo) =====
   html += '<div class="card">';
-  html += '<div class="card-title">💰 Cuentas por cobrar</div>';
-  var deudores = Object.keys(deudaPorCliente);
-  if(deudores.length){
-    var totalDeuda = 0;
-    deudores.forEach(function(c){
-      html += '<div class="linea-res"><span>'+c+'</span><span style="color:#c0392b;font-weight:700">$'+deudaPorCliente[c].toFixed(2)+'</span></div>';
-      totalDeuda += deudaPorCliente[c];
+  html += '<div class="card-title" style="color:#c0392b">Gastos</div>';
+  var conceptos = Object.keys(gastoPorConcepto);
+  if(conceptos.length){
+    conceptos.forEach(function(con){
+      html += '<div class="linea-res"><span style="color:#c0392b">- '+con+'</span><span style="color:#c0392b">($'+gastoPorConcepto[con].toFixed(2)+')</span></div>';
     });
-    html += '<div class="total-res"><span>Total por cobrar</span><span style="color:#c0392b">$'+totalDeuda.toFixed(2)+'</span></div>';
   } else {
-    html += '<div class="empty">Nadie debe esta semana ✓</div>';
+    html += '<div class="empty">Sin gastos este día</div>';
+  }
+  html += '<div class="total-res"><span>Total Gastos</span><span style="color:#c0392b">($'+totalEgresos.toFixed(2)+')</span></div>';
+  html += '</div>';
+
+  // ===== UTILIDAD NETA =====
+  html += '<div class="card" style="background:'+(utilidadNeta>=0?'#EAF3DE':'#FCE4E4')+';border-color:'+(utilidadNeta>=0?'#70AD47':'#c0392b')+'">';
+  html += '<div class="total-res" style="border:none;margin:0;padding:0;font-size:16px"><span>UTILIDAD NETA</span><span style="color:'+(utilidadNeta>=0?'#375623':'#c0392b')+'">$'+utilidadNeta.toFixed(2)+'</span></div>';
+  html += '</div>';
+
+  // ===== PENDIENTE POR COBRAR =====
+  html += '<div class="card">';
+  html += '<div class="card-title">Pendiente por cobrar</div>';
+  var deudores = Object.keys(pendientePorCliente);
+  if(deudores.length){
+    deudores.forEach(function(c){
+      html += '<div class="linea-res"><span>'+c+'</span><span style="color:#c0392b;font-weight:700">$'+pendientePorCliente[c].toFixed(2)+'</span></div>';
+    });
+    html += '<div class="total-res"><span>Total pendiente</span><span style="color:#c0392b">$'+totalPendiente.toFixed(2)+'</span></div>';
+  } else {
+    html += '<div class="empty">Todo cobrado ✓</div>';
   }
   html += '</div>';
 
