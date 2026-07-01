@@ -294,7 +294,7 @@ function guardarEnSheet(action, datos, onOk, botonId){
 // ====== CARGA INICIAL ======
 function cargarDatos(){
   // Clientes
-  fetch(sheetURL('Catálogos!A3:A17'))
+  fetch(sheetURL('Catálogos!A3:A100'))
     .then(function(r){ return r.json(); })
     .then(function(d){
       clientes = (d.values||[]).map(function(r){ return r[0]; }).filter(Boolean);
@@ -302,7 +302,7 @@ function cargarDatos(){
     })
     .catch(function(){ toast('No se pudieron cargar clientes', true); });
   // Cortes
-  fetch(sheetURL('Catálogos!B3:B20'))
+  fetch(sheetURL('Catálogos!B3:B100'))
     .then(function(r){ return r.json(); })
     .then(function(d){ cortes = (d.values||[]).map(function(r){ return r[0]; }).filter(Boolean); });
   // Precios (matriz completa)
