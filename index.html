@@ -249,6 +249,11 @@ function convertirFecha(iso){
   if(p.length !== 3) return iso;
   return p[2] + '/' + p[1] + '/' + p[0];
 }
+function limpiarNumero(v){
+  if(v === undefined || v === null || v === '') return 0;
+  if(typeof v === 'number') return v;
+  return parseFloat(String(v).replace(/[$,\s]/g,'')) || 0;
+}
 function toast(msg, esError){
   var t = document.getElementById('toast');
   t.textContent = msg;
@@ -514,10 +519,10 @@ function cargarEstadoCuenta(){
     var cobranza = res[1].values || [];
     cFacturado = 0; cPagado = 0;
     pedidos.forEach(function(row){
-      if(row[1]===sem && row[2]===cClienteActual) cFacturado += parseFloat(row[6])||0;
+      if(row[1]===sem && row[2]===cClienteActual) cFacturado += limpiarNumero(row[6]);
     });
     cobranza.forEach(function(row){
-      if(row[1]===sem && row[2]===cClienteActual) cPagado += parseFloat(row[4])||0;
+      if(row[1]===sem && row[2]===cClienteActual) cPagado += limpiarNumero(row[4]);
     });
     var resta = cFacturado - cPagado;
     document.getElementById('cc-facturado').textContent = '$'+cFacturado.toFixed(2);
@@ -543,7 +548,7 @@ function cargarDeudasCobranza(){
       filas.forEach(function(row){
         if(row[1] !== sem) return;
         var cli = row[2];
-        var saldo = parseFloat(row[6]) || 0;
+        var saldo = limpiarNumero(row[6]);
         if(saldo > 0) deuda[cli] = (deuda[cli]||0) + saldo;
       });
       var clientesDeuda = Object.keys(deuda);
@@ -671,7 +676,7 @@ function renderResumenData(sem, pedidos, cobranza, gastos){
   pedidos.forEach(function(row){
     if(row[1] !== sem) return; // columna B = semana
     var cliente = row[2];
-    var total = parseFloat(row[6]) || 0; // columna G = total
+    var total = limpiarNumero(row[6]); // columna G = total
     ventasPorCliente[cliente] = (ventasPorCliente[cliente]||0) + total;
     totalVendido += total;
   });
@@ -682,8 +687,8 @@ function renderResumenData(sem, pedidos, cobranza, gastos){
   cobranza.forEach(function(row){
     if(row[1] !== sem) return;
     var cliente = row[2];
-    var abono = parseFloat(row[4]) || 0; // columna E = abono
-    var saldo = parseFloat(row[6]) || 0; // columna G = saldo pendiente
+    var abono = limpiarNumero(row[4]); // columna E = abono
+    var saldo = limpiarNumero(row[6]); // columna G = saldo pendiente
     totalCobrado += abono;
     if(saldo > 0) deudaPorCliente[cliente] = (deudaPorCliente[cliente]||0) + saldo;
   });
@@ -692,7 +697,7 @@ function renderResumenData(sem, pedidos, cobranza, gastos){
   var totalGastos = 0;
   gastos.forEach(function(row){
     if(row[1] !== sem) return;
-    var monto = parseFloat(row[5]) || 0; // columna F = monto
+    var monto = limpiarNumero(row[5]); // columna F = monto
     totalGastos += monto;
   });
 
