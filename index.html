@@ -137,6 +137,7 @@ textarea{height:54px;resize:none}
     <h2>Pedidos — <span id="semana-tit"></span></h2>
     <div class="sub">Resumen de la semana</div>
     <div id="resumen-pedidos"></div>
+    <button class="btn btn-verde" onclick="irACobranza()">💰 Registrar pago</button>
     <button class="btn btn-azul" onclick="nuevoPedido()">+ Agregar otro pedido</button>
   </div>
 </div>
@@ -540,29 +541,44 @@ function cargarDeudasCobranza(){
   if(!semISO){ cont.innerHTML=''; return; }
   var sem = convertirFecha(semISO);
   cont.innerHTML = '<div class="cargando">Buscando deudas...</div>';
-  fetch(sheetURL('Cobranza!A3:H202'))
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      var filas = d.values || [];
-      var deuda = {};
-      filas.forEach(function(row){
-        if(row[1] !== sem) return;
-        var cli = row[2];
-        var saldo = limpiarNumero(row[6]);
-        if(saldo > 0) deuda[cli] = (deuda[cli]||0) + saldo;
-      });
-      var clientesDeuda = Object.keys(deuda);
-      if(!clientesDeuda.length){ cont.innerHTML=''; return; }
-      var html = '<div class="label">Quién debe este día</div><div class="card">';
-      var total = 0;
-      clientesDeuda.forEach(function(c){
-        html += '<div class="linea-res"><span>'+c+'</span><span style="color:#c0392b;font-weight:700">$'+deuda[c].toFixed(2)+'</span></div>';
-        total += deuda[c];
-      });
-      html += '<div class="total-res"><span>Total por cobrar</span><span style="color:#c0392b">$'+total.toFixed(2)+'</span></div></div>';
-      cont.innerHTML = html;
-    })
-    .catch(function(){ cont.innerHTML=''; });
+  // Leer Pedidos Y Cobranza para calcular pendiente real
+  Promise.all([
+    fetch(sheetURL('Pedidos!A3:H202')).then(function(r){ return r.json(); }),
+    fetch(sheetURL('Cobranza!A3:H202')).then(function(r){ return r.json(); })
+  ]).then(function(res){
+    var pedidos = res[0].values || [];
+    var cobranza = res[1].values || [];
+    // Facturado por cliente (de Pedidos)
+    var facturado = {};
+    pedidos.forEach(function(row){
+      if(row[1] !== sem) return;
+      var c = row[2];
+      facturado[c] = (facturado[c]||0) + limpiarNumero(row[6]);
+    });
+    // Pagado por cliente (de Cobranza)
+    var pagado = {};
+    cobranza.forEach(function(row){
+      if(row[1] !== sem) return;
+      var c = row[2];
+      pagado[c] = (pagado[c]||0) + limpiarNumero(row[4]);
+    });
+    // Pendiente = facturado - pagado
+    var deuda = {};
+    Object.keys(facturado).forEach(function(c){
+      var pend = facturado[c] - (pagado[c]||0);
+      if(pend > 0.01) deuda[c] = pend;
+    });
+    var clientesDeuda = Object.keys(deuda);
+    if(!clientesDeuda.length){ cont.innerHTML=''; return; }
+    var html = '<div class="label">Quién debe este día</div><div class="card">';
+    var total = 0;
+    clientesDeuda.forEach(function(c){
+      html += '<div class="linea-res"><span>'+c+'</span><span style="color:#c0392b;font-weight:700">$'+deuda[c].toFixed(2)+'</span></div>';
+      total += deuda[c];
+    });
+    html += '<div class="total-res"><span>Total por cobrar</span><span style="color:#c0392b">$'+total.toFixed(2)+'</span></div></div>';
+    cont.innerHTML = html;
+  }).catch(function(){ cont.innerHTML=''; });
 }
 
 
@@ -865,6 +881,25 @@ function refrescarGrids(){
   renderClientes();
   renderClientesCobranza();
   if(cortes.length) renderCortes();
+}
+
+function irACobranza(){
+  // Tomar la fecha y cliente del pedido actual
+  var semISO = document.getElementById('semana').value;
+  var cliente = clienteActual;
+  // Cambiar a la vista de Cobranza
+  cambiarVista('cobranza');
+  // Pre-seleccionar la fecha
+  if(semISO){
+    document.getElementById('c-semana').value = semISO;
+    cargarDeudasCobranza();
+  }
+  // Pre-seleccionar el cliente
+  if(cliente){
+    cClienteActual = cliente;
+    renderClientesCobranza();
+    cargarEstadoCuenta();
+  }
 }
 
 // ====== INIT ======
