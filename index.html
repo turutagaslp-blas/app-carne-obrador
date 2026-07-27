@@ -95,19 +95,23 @@ textarea{height:54px;resize:none}
 .agregar-row{display:flex;gap:6px;margin-bottom:14px}
 .agregar-row input{flex:1;margin:0;border:1.5px solid #ddd;border-radius:8px;padding:10px;font-size:15px}
 .agregar-row button{background:#70AD47;color:#fff;border:none;border-radius:8px;padding:0 16px;font-size:14px;font-weight:600;cursor:pointer}
+.edit-linea{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.edit-corte{flex:1;font-size:13px;color:#1F3864;font-weight:600}
+.edit-kg,.edit-precio{width:64px;border:1.5px solid #2E75B6;border-radius:6px;padding:6px;font-size:14px;margin:0}
+.edit-quitar{color:#c0392b;font-weight:700;cursor:pointer;padding:0 4px;font-size:16px}
 </style>
 </head>
 <body>
-
+ 
 <div class="topbar">🐷 <span id="topbar-title">Levantar Pedidos</span></div>
 <div id="toast" class="toast"></div>
-
+ 
 <div class="container">
-
+ 
 <!-- ===== PEDIDOS ===== -->
 <div id="vista-pedidos" class="screen active">
   <div class="pasos-bar"><div class="p active" id="pb1"></div><div class="p" id="pb2"></div><div class="p" id="pb3"></div></div>
-
+ 
   <div id="paso1" class="screen active">
     <h2>Nuevo pedido</h2>
     <div class="sub">Elige la semana y el cliente</div>
@@ -115,8 +119,9 @@ textarea{height:54px;resize:none}
     <div class="label label-row">Cliente <span class="link-gestionar" onclick="abrirGestion('cliente')">+ Gestionar</span></div>
     <div class="grid2" id="grid-clientes"><div class="cargando">Cargando clientes...</div></div>
     <br><button class="btn btn-azul" onclick="irPaso2()">Seleccionar piezas →</button>
+    <button class="btn btn-gris" onclick="abrirPedidosGuardados()">📋 Ver / editar pedidos guardados</button>
   </div>
-
+ 
   <div id="paso2" class="screen">
     <h2 id="titulo-p2">Pedido de —</h2>
     <div class="sub">Toca los cortes y anota los kilos</div>
@@ -132,7 +137,7 @@ textarea{height:54px;resize:none}
     <button id="btn-guardar-pedido" class="btn btn-verde" onclick="guardarPedido()">Guardar pedido ✓</button>
     <button class="btn btn-gris" onclick="setPaso(1)">← Cambiar cliente</button>
   </div>
-
+ 
   <div id="paso3" class="screen">
     <h2>Pedidos — <span id="semana-tit"></span></h2>
     <div class="sub">Resumen de la semana</div>
@@ -141,7 +146,7 @@ textarea{height:54px;resize:none}
     <button class="btn btn-azul" onclick="nuevoPedido()">+ Agregar otro pedido</button>
   </div>
 </div>
-
+ 
 <!-- ===== COBRANZA ===== -->
 <div id="vista-cobranza" class="screen">
   <h2>Registrar cobranza</h2>
@@ -149,14 +154,14 @@ textarea{height:54px;resize:none}
   <div class="semana-row"><label>Día:</label><input type="date" id="c-semana"></div>
   <div class="label">Cliente</div>
   <div class="grid2" id="c-grid-clientes"><div class="cargando">Cargando...</div></div>
-
+ 
   <div id="c-estado-cuenta" style="display:none">
     <div class="resumen-box">
       <div class="linea-res"><span>Total facturado</span><span id="cc-facturado">$0</span></div>
       <div class="linea-res"><span>Ya pagado</span><span id="cc-pagado" style="color:#375623;font-weight:700">$0</span></div>
       <div class="linea-res total-res saldo" id="cc-resta-row"><span>Resta por pagar</span><span id="cc-resta">$0</span></div>
     </div>
-
+ 
     <div class="label">Nuevo abono ($)</div>
     <input type="number" id="c-abono" placeholder="0" inputmode="decimal">
     <div class="label">Forma de pago</div>
@@ -165,10 +170,10 @@ textarea{height:54px;resize:none}
     <textarea id="c-nota" placeholder="Ej: pagó con billete de 500"></textarea>
     <button id="btn-guardar-cobranza" class="btn btn-verde" onclick="guardarCobranza()">Guardar abono ✓</button>
   </div>
-
+ 
   <div id="c-deudas"></div>
 </div>
-
+ 
 <!-- ===== GASTOS ===== -->
 <div id="vista-gastos" class="screen">
   <h2>Registrar gasto / compra</h2>
@@ -193,7 +198,7 @@ textarea{height:54px;resize:none}
   <textarea id="g-nota" placeholder="Ej: 2 canales de proveedor Pérez"></textarea>
   <button id="btn-guardar-gasto" class="btn btn-naranja" onclick="guardarGasto()">Guardar gasto ✓</button>
 </div>
-
+ 
 <!-- ===== BALANCE ===== -->
 <div id="vista-resumen" class="screen">
   <h2>Balance del fin de semana</h2>
@@ -207,9 +212,21 @@ textarea{height:54px;resize:none}
     <div class="empty">Elige el día y toca "Ver"</div>
   </div>
 </div>
-
+ 
 </div>
-
+ 
+<div id="modal-pedidos" class="modal-bg">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="mp-titulo">Pedidos guardados</h2>
+      <button class="modal-close" onclick="cerrarPedidosGuardados()">&times;</button>
+    </div>
+    <div class="semana-row"><label>Día:</label><input type="date" id="mp-semana"></div>
+    <button class="btn btn-azul" onclick="cargarPedidosGuardados()">Ver pedidos</button>
+    <div id="mp-lista"></div>
+  </div>
+</div>
+ 
 <div id="modal-gestion" class="modal-bg">
   <div class="modal">
     <div class="modal-head">
@@ -223,26 +240,26 @@ textarea{height:54px;resize:none}
     <div id="lista-cat"></div>
   </div>
 </div>
-
+ 
 <div class="nav">
   <button id="nav-pedidos" class="active" onclick="cambiarVista('pedidos')"><span class="ico">🛒</span>Pedidos</button>
   <button id="nav-cobranza" onclick="cambiarVista('cobranza')"><span class="ico">💰</span>Cobranza</button>
   <button id="nav-gastos" onclick="cambiarVista('gastos')"><span class="ico">📦</span>Gastos</button>
   <button id="nav-resumen" onclick="cambiarVista('resumen')"><span class="ico">📊</span>Balance</button>
 </div>
-
+ 
 <script>
 // ====== CONFIGURACIÓN ======
 var API_KEY = 'AIzaSyAkXYXBApwfaS_Ds_Ov8KGZEGWGqSidRt4';
 var SHEET_ID = '1k-i4h4wwIi9C8uCaZo7tGzbe_MTsk8s4h67ru5wqNjk';
 var BACKEND = 'https://script.google.com/macros/s/AKfycbz7-FCCqh1PmKuovw9fTqO1c8bo6D4x2fRB9C7WB5_f6i9P_gn3kwRTo8nCY4prvOE_-Q/exec';
-
+ 
 // ====== ESTADO ======
 var clientes = [], cortes = [], preciosMatriz = {};
 var cortesActivos = {}, pedidos = [], clienteActual = '', preciosCliente = {};
 var clientesYaPedido = [];
 var tipoActual = '';
-
+ 
 // ====== UTILIDADES ======
 function convertirFecha(iso){
   if(!iso) return '';
@@ -262,7 +279,7 @@ function toast(msg, esError){
   t.style.display = 'block';
   setTimeout(function(){ t.style.display = 'none'; }, 2600);
 }
-
+ 
 function bloquearBoton(id, textoEspera){
   var b = document.getElementById(id);
   if(b){ b.disabled = true; b.dataset.txt = b.textContent; b.textContent = textoEspera; b.style.opacity = '0.6'; }
@@ -271,19 +288,19 @@ function liberarBoton(id){
   var b = document.getElementById(id);
   if(b){ b.disabled = false; if(b.dataset.txt) b.textContent = b.dataset.txt; b.style.opacity = '1'; }
 }
-
+ 
 function sheetURL(rango){
   return 'https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID +
     '/values/' + encodeURIComponent(rango) + '?key=' + API_KEY;
 }
-
+ 
 function guardarEnSheet(action, datos, onOk, botonId){
   var url = BACKEND + '?action=' + action + '&datos=' + encodeURIComponent(JSON.stringify(datos));
   fetch(url)
     .then(function(r){ return r.json(); })
     .then(function(resp){
       if(botonId) liberarBoton(botonId);
-      if(resp.status === 'ok'){ onOk(); }
+      if(resp.status === 'ok'){ onOk(resp); }
       else { toast('Error: ' + (resp.mensaje||'no se pudo guardar'), true); }
     })
     .catch(function(err){
@@ -291,7 +308,7 @@ function guardarEnSheet(action, datos, onOk, botonId){
       toast('Error de conexión: ' + err.message, true);
     });
 }
-
+ 
 // ====== CARGA INICIAL ======
 function cargarDatos(){
   // Clientes
@@ -311,7 +328,7 @@ function cargarDatos(){
     .then(function(r){ return r.json(); })
     .then(function(d){ parsePrecios(d.values||[]); });
 }
-
+ 
 function parsePrecios(filas){
   preciosMatriz = {};
   if(!filas.length) return;
@@ -329,7 +346,7 @@ function parsePrecios(filas){
     }
   }
 }
-
+ 
 function getPreciosCliente(cli){
   var r = {};
   cortes.forEach(function(corte){
@@ -338,7 +355,7 @@ function getPreciosCliente(cli){
   });
   return r;
 }
-
+ 
 // ====== NAVEGACIÓN ======
 function cambiarVista(v){
   ['pedidos','cobranza','gastos','resumen'].forEach(function(x){
@@ -348,7 +365,7 @@ function cambiarVista(v){
   var titulos = {pedidos:'Levantar Pedidos', cobranza:'Registrar Cobranza', gastos:'Registrar Gastos', resumen:'Balance'};
   document.getElementById('topbar-title').textContent = titulos[v];
 }
-
+ 
 // ====== PEDIDOS ======
 function renderClientes(){
   var g = document.getElementById('grid-clientes'); g.innerHTML='';
@@ -362,7 +379,7 @@ function renderClientes(){
     g.appendChild(b);
   });
 }
-
+ 
 function cargarPedidosDelDia(){
   var semISO = document.getElementById('semana').value;
   if(!semISO){ clientesYaPedido = []; renderClientes(); return; }
@@ -380,7 +397,7 @@ function cargarPedidosDelDia(){
     })
     .catch(function(){ clientesYaPedido = []; renderClientes(); });
 }
-
+ 
 function setPaso(n){
   [1,2,3].forEach(function(i){
     document.getElementById('paso'+i).className = 'screen' + (i===n?' active':'');
@@ -388,7 +405,7 @@ function setPaso(n){
     pb.className = 'p' + (i<n?' done':(i===n?' active':''));
   });
 }
-
+ 
 function irPaso2(){
   var semISO = document.getElementById('semana').value;
   if(!semISO){ toast('Elige el día primero', true); return; }
@@ -400,7 +417,7 @@ function irPaso2(){
   renderCortes();
   setPaso(2);
 }
-
+ 
 function renderCortes(){
   var g = document.getElementById('grid-cortes'); g.innerHTML='';
   cortes.forEach(function(c){
@@ -412,13 +429,13 @@ function renderCortes(){
   });
   renderLineas();
 }
-
+ 
 function toggleCorte(c){
   if(cortesActivos[c]) delete cortesActivos[c];
   else cortesActivos[c] = {kg:'', precio: preciosCliente[c]||''};
   renderCortes();
 }
-
+ 
 function renderLineas(){
   var keys = Object.keys(cortesActivos);
   document.getElementById('lineas-wrap').style.display = keys.length?'block':'none';
@@ -434,7 +451,7 @@ function renderLineas(){
     cont.appendChild(d);
   });
 }
-
+ 
 function guardarPedido(){
   var keys = Object.keys(cortesActivos);
   if(!keys.length){ toast('Agrega al menos un corte', true); return; }
@@ -463,7 +480,7 @@ function guardarPedido(){
     setPaso(3);
   }, 'btn-guardar-pedido');
 }
-
+ 
 function renderResumen(){
   var cont = document.getElementById('resumen-pedidos');
   if(!pedidos.length){ cont.innerHTML='<div class="empty">Sin pedidos aún</div>'; return; }
@@ -480,13 +497,13 @@ function renderResumen(){
     cont.appendChild(card);
   });
 }
-
+ 
 function nuevoPedido(){
   clienteActual=''; cortesActivos={};
   renderClientes();
   setPaso(1);
 }
-
+ 
 // ====== COBRANZA ======
 var cClienteActual = '';
 var cFacturado = 0, cPagado = 0;
@@ -500,7 +517,7 @@ function renderClientesCobranza(){
     g.appendChild(b);
   });
 }
-
+ 
 function cargarEstadoCuenta(){
   var semISO = document.getElementById('c-semana').value;
   var caja = document.getElementById('c-estado-cuenta');
@@ -510,7 +527,7 @@ function cargarEstadoCuenta(){
   document.getElementById('cc-facturado').textContent = 'Cargando...';
   document.getElementById('cc-pagado').textContent = '';
   document.getElementById('cc-resta').textContent = '';
-
+ 
   // Leer facturado (Pedidos) y pagado (Cobranza) en paralelo
   Promise.all([
     fetch(sheetURL('Pedidos!A3:H202')).then(function(r){return r.json();}),
@@ -534,7 +551,7 @@ function cargarEstadoCuenta(){
     document.getElementById('cc-facturado').textContent = 'Error al cargar';
   });
 }
-
+ 
 function cargarDeudasCobranza(){
   var semISO = document.getElementById('c-semana').value;
   var cont = document.getElementById('c-deudas');
@@ -580,8 +597,8 @@ function cargarDeudasCobranza(){
     cont.innerHTML = html;
   }).catch(function(){ cont.innerHTML=''; });
 }
-
-
+ 
+ 
 function guardarCobranza(){
   var sem = convertirFecha(document.getElementById('c-semana').value);
   if(!sem){ toast('Elige el día', true); return; }
@@ -610,7 +627,7 @@ function guardarCobranza(){
     toast(saldoDespues<=0.01 ? '✓ Pagado completo' : '✓ Abono guardado');
   }, 'btn-guardar-cobranza');
 }
-
+ 
 // ====== GASTOS ======
 function selTipo(tipo){
   tipoActual = tipo;
@@ -625,7 +642,7 @@ function selTipo(tipo){
     sel.innerHTML='<option value="">-- Selecciona --</option><option>Renta</option><option>Empleados</option><option>Gasolina / Gas</option><option>Maquila Rastro</option><option>Otro</option>';
   }
 }
-
+ 
 function guardarGasto(){
   var sem = convertirFecha(document.getElementById('g-semana').value);
   if(!sem){ toast('Elige el día', true); return; }
@@ -658,19 +675,19 @@ function guardarGasto(){
     toast('✓ Gasto guardado');
   }, 'btn-guardar-gasto');
 }
-
-
+ 
+ 
 // ====== RESUMEN ======
 function cargarResumen(){
   var sem = convertirFecha(document.getElementById('r-semana').value);
   if(!sem){ toast('Elige el día a consultar', true); return; }
   var cont = document.getElementById('r-contenido');
   cont.innerHTML = '<div class="cargando">Cargando datos de la semana...</div>';
-
+ 
   var urlPedidos = sheetURL('Pedidos!A3:H202');
   var urlCobranza = sheetURL('Cobranza!A3:H202');
   var urlGastos = sheetURL("'Gastos y Compras'!A3:G202");
-
+ 
   Promise.all([
     fetch(urlPedidos).then(function(r){return r.json();}),
     fetch(urlCobranza).then(function(r){return r.json();}),
@@ -684,7 +701,7 @@ function cargarResumen(){
     cont.innerHTML = '<div class="empty">Error al cargar: '+err.message+'</div>';
   });
 }
-
+ 
 function renderResumenData(sem, pedidos, cobranza, gastos){
   // INGRESOS: lo COBRADO por cliente (abonos), agrupado
   var cobradoPorCliente = {};
@@ -698,7 +715,7 @@ function renderResumenData(sem, pedidos, cobranza, gastos){
       totalIngresos += abono;
     }
   });
-
+ 
   // EGRESOS: gastos por concepto, agrupado
   var gastoPorConcepto = {};
   var totalEgresos = 0;
@@ -709,9 +726,9 @@ function renderResumenData(sem, pedidos, cobranza, gastos){
     gastoPorConcepto[concepto] = (gastoPorConcepto[concepto]||0) + monto;
     totalEgresos += monto;
   });
-
+ 
   var utilidadNeta = totalIngresos - totalEgresos;
-
+ 
   // PENDIENTE POR COBRAR: facturado (Pedidos) - pagado (Cobranza), por cliente
   var facturadoPorCliente = {};
   pedidos.forEach(function(row){
@@ -731,9 +748,9 @@ function renderResumenData(sem, pedidos, cobranza, gastos){
     var pend = facturadoPorCliente[c] - (pagadoPorCliente[c]||0);
     if(pend > 0.01){ pendientePorCliente[c] = pend; totalPendiente += pend; }
   });
-
+ 
   var html = '';
-
+ 
   // ===== INGRESOS (verde) =====
   html += '<div class="card">';
   html += '<div class="card-title" style="color:#375623">Ingresos</div>';
@@ -747,7 +764,7 @@ function renderResumenData(sem, pedidos, cobranza, gastos){
   }
   html += '<div class="total-res"><span>Utilidad Bruta</span><span style="color:#375623">$'+totalIngresos.toFixed(2)+'</span></div>';
   html += '</div>';
-
+ 
   // ===== EGRESOS (rojo) =====
   html += '<div class="card">';
   html += '<div class="card-title" style="color:#c0392b">Gastos</div>';
@@ -761,12 +778,12 @@ function renderResumenData(sem, pedidos, cobranza, gastos){
   }
   html += '<div class="total-res"><span>Total Gastos</span><span style="color:#c0392b">($'+totalEgresos.toFixed(2)+')</span></div>';
   html += '</div>';
-
+ 
   // ===== UTILIDAD NETA =====
   html += '<div class="card" style="background:'+(utilidadNeta>=0?'#EAF3DE':'#FCE4E4')+';border-color:'+(utilidadNeta>=0?'#70AD47':'#c0392b')+'">';
   html += '<div class="total-res" style="border:none;margin:0;padding:0;font-size:16px"><span>UTILIDAD NETA</span><span style="color:'+(utilidadNeta>=0?'#375623':'#c0392b')+'">$'+utilidadNeta.toFixed(2)+'</span></div>';
   html += '</div>';
-
+ 
   // ===== PENDIENTE POR COBRAR =====
   html += '<div class="card">';
   html += '<div class="card-title">Pendiente por cobrar</div>';
@@ -780,14 +797,14 @@ function renderResumenData(sem, pedidos, cobranza, gastos){
     html += '<div class="empty">Todo cobrado ✓</div>';
   }
   html += '</div>';
-
+ 
   document.getElementById('r-contenido').innerHTML = html;
 }
-
+ 
 // ====== GESTIÓN DE CATÁLOGOS ======
 var gestionTipo = 'cliente'; // 'cliente' o 'corte'
 var gestionEditando = null;  // nombre que se está editando
-
+ 
 function abrirGestion(tipo){
   gestionTipo = tipo;
   gestionEditando = null;
@@ -797,12 +814,12 @@ function abrirGestion(tipo){
   document.getElementById('modal-gestion').className = 'modal-bg open';
   renderListaCat();
 }
-
+ 
 function cerrarGestion(){
   document.getElementById('modal-gestion').className = 'modal-bg';
   gestionEditando = null;
 }
-
+ 
 function renderListaCat(){
   var lista = (gestionTipo==='cliente') ? clientes : cortes;
   var cont = document.getElementById('lista-cat');
@@ -824,7 +841,7 @@ function renderListaCat(){
     cont.appendChild(div);
   });
 }
-
+ 
 function agregarCat(){
   var nombre = document.getElementById('nuevo-cat').value.trim();
   if(!nombre){ toast('Escribe un nombre', true); return; }
@@ -842,10 +859,10 @@ function agregarCat(){
     toast('✓ Agregado');
   }, 'btn-agregar-cat');
 }
-
+ 
 function iniciarEdicion(nombre){ gestionEditando = nombre; renderListaCat(); setTimeout(function(){ var i=document.getElementById('edit-input'); if(i) i.focus(); },50); }
 function cancelarEdicion(){ gestionEditando = null; renderListaCat(); }
-
+ 
 function guardarEdicion(viejo){
   var nuevo = document.getElementById('edit-input').value.trim();
   if(!nuevo){ toast('Escribe un nombre', true); return; }
@@ -864,7 +881,7 @@ function guardarEdicion(viejo){
     toast('✓ Editado');
   });
 }
-
+ 
 function confirmarBorrar(nombre){
   if(!confirm('¿Seguro que quieres borrar a "'+nombre+'"?\n\nLos pedidos viejos no se borran, solo deja de aparecer en las listas.')) return;
   guardarEnSheet('borrarCatalogo', {tipo:gestionTipo, nombre:nombre}, function(){
@@ -876,13 +893,13 @@ function confirmarBorrar(nombre){
     toast('✓ Borrado');
   });
 }
-
+ 
 function refrescarGrids(){
   renderClientes();
   renderClientesCobranza();
   if(cortes.length) renderCortes();
 }
-
+ 
 function irACobranza(){
   // Tomar la fecha y cliente del pedido actual
   var semISO = document.getElementById('semana').value;
@@ -901,7 +918,168 @@ function irACobranza(){
     cargarEstadoCuenta();
   }
 }
-
+ 
+// ====== VER / EDITAR PEDIDOS GUARDADOS ======
+var mpEditando = null; // cliente que se está editando
+var mpLineasEdit = []; // líneas en edición
+ 
+function abrirPedidosGuardados(){
+  document.getElementById('modal-pedidos').className = 'modal-bg open';
+  // Copiar la fecha del pedido si ya se eligió
+  var semPed = document.getElementById('semana').value;
+  if(semPed) document.getElementById('mp-semana').value = semPed;
+  document.getElementById('mp-lista').innerHTML = '<div class="empty">Elige el día y toca "Ver pedidos"</div>';
+  mpEditando = null;
+}
+ 
+function cerrarPedidosGuardados(){
+  document.getElementById('modal-pedidos').className = 'modal-bg';
+  mpEditando = null;
+}
+ 
+function cargarPedidosGuardados(){
+  var semISO = document.getElementById('mp-semana').value;
+  if(!semISO){ toast('Elige el día primero', true); return; }
+  var sem = convertirFecha(semISO);
+  var cont = document.getElementById('mp-lista');
+  cont.innerHTML = '<div class="cargando">Cargando pedidos...</div>';
+  mpEditando = null;
+  fetch(sheetURL('Pedidos!A3:H202'))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var filas = d.values || [];
+      // Agrupar por cliente
+      var porCliente = {};
+      filas.forEach(function(row){
+        if(row[1] !== sem || !row[2]) return;
+        var cli = row[2];
+        if(!porCliente[cli]) porCliente[cli] = [];
+        porCliente[cli].push({ corte: row[3], kg: limpiarNumero(row[4]), precio: limpiarNumero(row[5]) });
+      });
+      renderPedidosGuardados(sem, porCliente);
+    })
+    .catch(function(){ cont.innerHTML = '<div class="empty">Error al cargar</div>'; });
+}
+ 
+function renderPedidosGuardados(sem, porCliente){
+  var cont = document.getElementById('mp-lista');
+  var clientes = Object.keys(porCliente);
+  if(!clientes.length){ cont.innerHTML = '<div class="empty">Sin pedidos ese día</div>'; return; }
+  cont.innerHTML = '';
+  clientes.forEach(function(cli){
+    var lineas = porCliente[cli];
+    var total = lineas.reduce(function(s,l){ return s + l.kg*l.precio; }, 0);
+    var card = document.createElement('div');
+    card.className = 'card';
+    if(mpEditando === cli){
+      // Modo edición
+      var filasHtml = mpLineasEdit.map(function(l, i){
+        return '<div class="edit-linea">'+
+          '<span class="edit-corte">'+l.corte+'</span>'+
+          '<input type="number" class="edit-kg" value="'+l.kg+'" placeholder="kg" oninput="mpCambiar('+i+',\'kg\',this.value)">'+
+          '<input type="number" class="edit-precio" value="'+l.precio+'" placeholder="$" oninput="mpCambiar('+i+',\'precio\',this.value)">'+
+          '<span class="edit-quitar" onclick="mpQuitarLinea('+i+')">✕</span>'+
+          '</div>';
+      }).join('');
+      card.innerHTML = '<div class="card-title">'+cli+' (editando)</div>'+
+        filasHtml+
+        '<div class="cat-acciones" style="margin-top:10px;justify-content:flex-end">'+
+        '<span class="gu" onclick="mpGuardarEdicion(\''+cli.replace(/'/g,"\\'")+'\',\''+sem+'\')">Guardar cambios</span>'+
+        '<span class="ca" onclick="mpCancelarEdicion(\''+sem+'\')">Cancelar</span></div>';
+    } else {
+      // Modo vista
+      var lh = lineas.map(function(l){
+        return '<div class="linea-res"><span>'+l.corte+'</span><span>'+l.kg+' kg · $'+(l.kg*l.precio).toFixed(2)+'</span></div>';
+      }).join('');
+      card.innerHTML = '<div class="card-title">'+cli+'</div>'+lh+
+        '<div class="total-res"><span>Total</span><span>$'+total.toFixed(2)+'</span></div>'+
+        '<div class="cat-acciones" style="margin-top:10px;justify-content:flex-end">'+
+        '<span class="ed" onclick="mpIniciarEdicion(\''+cli.replace(/'/g,"\\'")+'\',\''+sem+'\')">✏️ Editar</span>'+
+        '<span class="bo" onclick="mpBorrar(\''+cli.replace(/'/g,"\\'")+'\',\''+sem+'\')">🗑️ Borrar</span></div>';
+    }
+    cont.appendChild(card);
+  });
+}
+ 
+function mpIniciarEdicion(cli, sem){
+  // Recargar para obtener las líneas frescas y entrar en modo edición
+  fetch(sheetURL('Pedidos!A3:H202'))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var filas = d.values || [];
+      mpLineasEdit = [];
+      filas.forEach(function(row){
+        if(row[1]===sem && row[2]===cli){
+          mpLineasEdit.push({ corte: row[3], kg: limpiarNumero(row[4]), precio: limpiarNumero(row[5]) });
+        }
+      });
+      mpEditando = cli;
+      cargarPedidosGuardadosDesdeCache(sem);
+    });
+}
+ 
+// Recargar la lista respetando el modo edición
+function cargarPedidosGuardadosDesdeCache(sem){
+  fetch(sheetURL('Pedidos!A3:H202'))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var filas = d.values || [];
+      var porCliente = {};
+      filas.forEach(function(row){
+        if(row[1] !== sem || !row[2]) return;
+        var cli = row[2];
+        if(!porCliente[cli]) porCliente[cli] = [];
+        porCliente[cli].push({ corte: row[3], kg: limpiarNumero(row[4]), precio: limpiarNumero(row[5]) });
+      });
+      renderPedidosGuardados(sem, porCliente);
+    });
+}
+ 
+function mpCambiar(i, campo, valor){
+  if(mpLineasEdit[i]) mpLineasEdit[i][campo] = limpiarNumero(valor);
+}
+ 
+function mpQuitarLinea(i){
+  mpLineasEdit.splice(i, 1);
+  // Re-renderizar solo el card en edición
+  var sem = convertirFecha(document.getElementById('mp-semana').value);
+  cargarPedidosGuardadosDesdeCache(sem);
+}
+ 
+function mpCancelarEdicion(sem){
+  mpEditando = null;
+  mpLineasEdit = [];
+  cargarPedidosGuardadosDesdeCache(sem);
+}
+ 
+function mpGuardarEdicion(cli, sem){
+  if(!mpLineasEdit.length){ toast('El pedido no puede quedar vacío. Usa Borrar en su lugar.', true); return; }
+  var datos = { fecha: sem, cliente: cli, lineas: mpLineasEdit };
+  toast('Guardando cambios...');
+  guardarEnSheet('editarPedidoCliente', datos, function(resp){
+    mpEditando = null;
+    mpLineasEdit = [];
+    cargarPedidosGuardadosDesdeCache(sem);
+    if(resp && resp.resultado && resp.resultado.tienePagos){
+      setTimeout(function(){ alert('⚠️ Ojo: este cliente ya tiene pagos registrados en Cobranza. Revisa que el monto siga correcto.'); }, 300);
+    }
+    toast('✓ Pedido actualizado');
+  });
+}
+ 
+function mpBorrar(cli, sem){
+  if(!confirm('¿Seguro que quieres borrar el pedido de "'+cli+'"?')) return;
+  var datos = { fecha: sem, cliente: cli };
+  toast('Borrando...');
+  guardarEnSheet('borrarPedidoCliente', datos, function(resp){
+    cargarPedidosGuardadosDesdeCache(sem);
+    if(resp && resp.resultado && resp.resultado.tienePagos){
+      setTimeout(function(){ alert('⚠️ Ojo: este cliente ya tenía pagos registrados en Cobranza. El pedido se borró, pero revisa la cobranza de ese cliente.'); }, 300);
+    }
+    toast('✓ Pedido borrado');
+  });
+}
+ 
 // ====== INIT ======
 document.getElementById('semana').addEventListener('change', cargarPedidosDelDia);
 document.getElementById('c-semana').addEventListener('change', function(){ cargarDeudasCobranza(); cargarEstadoCuenta(); });
@@ -909,3 +1087,4 @@ cargarDatos();
 </script>
 </body>
 </html>
+ 
