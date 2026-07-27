@@ -976,16 +976,27 @@ function renderPedidosGuardados(sem, porCliente){
       var filasHtml = mpLineasEdit.map(function(l, i){
         return '<div class="edit-linea">'+
           '<span class="edit-corte">'+l.corte+'</span>'+
-          '<input type="number" class="edit-kg" value="'+l.kg+'" placeholder="kg" oninput="mpCambiar('+i+',\'kg\',this.value)">'+
-          '<input type="number" class="edit-precio" value="'+l.precio+'" placeholder="$" oninput="mpCambiar('+i+',\'precio\',this.value)">'+
-          '<span class="edit-quitar" onclick="mpQuitarLinea('+i+')">✕</span>'+
+          '<input type="number" class="edit-kg" value="'+l.kg+'" placeholder="kg" data-kg="'+i+'">'+
+          '<input type="number" class="edit-precio" value="'+l.precio+'" placeholder="$" data-precio="'+i+'">'+
+          '<span class="edit-quitar" data-quitar="'+i+'">✕</span>'+
           '</div>';
       }).join('');
-      card.innerHTML = '<div class="card-title">'+cli+' (editando)</div>'+
-        filasHtml+
+      card.innerHTML = '<div class="card-title">'+cli+' (editando)</div>'+filasHtml+
         '<div class="cat-acciones" style="margin-top:10px;justify-content:flex-end">'+
-        '<span class="gu" onclick="mpGuardarEdicion(\''+cli.replace(/'/g,"\\'")+'\',\''+sem+'\')">Guardar cambios</span>'+
-        '<span class="ca" onclick="mpCancelarEdicion(\''+sem+'\')">Cancelar</span></div>';
+        '<span class="gu" data-guardar="1">Guardar cambios</span>'+
+        '<span class="ca" data-cancelar="1">Cancelar</span></div>';
+      cont.appendChild(card);
+      card.querySelectorAll('[data-kg]').forEach(function(el){
+        el.addEventListener('input', function(){ mpCambiar(parseInt(el.getAttribute('data-kg')),'kg',el.value); });
+      });
+      card.querySelectorAll('[data-precio]').forEach(function(el){
+        el.addEventListener('input', function(){ mpCambiar(parseInt(el.getAttribute('data-precio')),'precio',el.value); });
+      });
+      card.querySelectorAll('[data-quitar]').forEach(function(el){
+        el.addEventListener('click', function(){ mpQuitarLinea(parseInt(el.getAttribute('data-quitar'))); });
+      });
+      card.querySelector('[data-guardar]').addEventListener('click', function(){ mpGuardarEdicion(cli, sem); });
+      card.querySelector('[data-cancelar]').addEventListener('click', function(){ mpCancelarEdicion(sem); });
     } else {
       // Modo vista
       var lh = lineas.map(function(l){
@@ -994,10 +1005,12 @@ function renderPedidosGuardados(sem, porCliente){
       card.innerHTML = '<div class="card-title">'+cli+'</div>'+lh+
         '<div class="total-res"><span>Total</span><span>$'+total.toFixed(2)+'</span></div>'+
         '<div class="cat-acciones" style="margin-top:10px;justify-content:flex-end">'+
-        '<span class="ed" onclick="mpIniciarEdicion(\''+cli.replace(/'/g,"\\'")+'\',\''+sem+'\')">✏️ Editar</span>'+
-        '<span class="bo" onclick="mpBorrar(\''+cli.replace(/'/g,"\\'")+'\',\''+sem+'\')">🗑️ Borrar</span></div>';
+        '<span class="ed" data-editar="1">✏️ Editar</span>'+
+        '<span class="bo" data-borrar="1">🗑️ Borrar</span></div>';
+      cont.appendChild(card);
+      card.querySelector('[data-editar]').addEventListener('click', function(){ mpIniciarEdicion(cli, sem); });
+      card.querySelector('[data-borrar]').addEventListener('click', function(){ mpBorrar(cli, sem); });
     }
-    cont.appendChild(card);
   });
 }
  
@@ -1087,4 +1100,3 @@ cargarDatos();
 </script>
 </body>
 </html>
- 
